@@ -36,8 +36,15 @@ from ..bosh import omods
 
 # If comtypes is not installed, the IE ActiveX control cannot be imported
 try:
-    import wx.lib.iewin
-    bHaveComTypes = True
+    if 'phoenix' in wx.version():  # ===PHOENIX HACKS & FIXES===
+        #### import wx.html2 as webview  # wx3/PHOENIX TESTING
+        wx.ArtProvider_GetBitmap = wx.ArtProvider.GetBitmap  # wx28/PHOENIX FIX quick HACK
+        bHaveComTypes = False
+    else:
+        import wx.lib.iewin
+        bHaveComTypes = True
+    # import wx.lib.iewin
+    # bHaveComTypes = True
 except ImportError:
     bHaveComTypes = False
     deprint(
@@ -96,6 +103,7 @@ class DocBrowser(wx.Frame):
         if bHaveComTypes:
             self.htmlText = wx.lib.iewin.IEHtmlWindow(
                 self, style=wx.NO_FULL_REPAINT_ON_RESIZE)
+            #### self.htmlText = webview.WebView.New(self)  # wx3/PHOENIX TESTING
             #--Html Back
             bitmap = wx.ArtProvider_GetBitmap(wx.ART_GO_BACK,
                                               wx.ART_HELP_BROWSER, (16, 16))
@@ -394,6 +402,7 @@ class ModChecker(wx.Frame):
         if bHaveComTypes:
             self.gTextCtrl = wx.lib.iewin.IEHtmlWindow(
                 self, style=wx.NO_FULL_REPAINT_ON_RESIZE)
+            #### self.gTextCtrl = webview.WebView.New(self)  # wx3/PHOENIX TESTING
             #--Buttons
             bitmap = wx.ArtProvider_GetBitmap(wx.ART_GO_BACK,
                                               wx.ART_HELP_BROWSER, (16, 16))
