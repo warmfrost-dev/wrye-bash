@@ -2985,6 +2985,7 @@ class DnDStatusBar(wx.StatusBar):
             if released != self.dragging: released = wx.NOT_FOUND
             self.dragging = wx.NOT_FOUND
             self.SetCursor(wx.StockCursor(wx.CURSOR_ARROW))
+            #### self.SetCursor(wx.Cursor(wx.CURSOR_ARROW))  # PHOENIX FIX
             if self.moved:
                 self.moved = False
                 return
