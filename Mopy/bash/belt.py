@@ -31,10 +31,15 @@ import load_order
 from ScriptParser import error
 import wx
 if 'phoenix' in wx.version():  # ===PHOENIX PORTING HACKS & FIXES===
-    import wx.adv as wiz  # PHOENIX HACKish namespace FIX
-    wiz.PyWizardPage = wiz.WizardPage # PHOENIX quick HACK
+    import wx.adv
+    from wx.adv import Wizard
+    from wx.adv import WizardPage, WizardPageSimple
+    wiz = wx.adv
 else:  # wxPython Classic
-    import wx.wizard as wiz     # wxPython wizard class
+    from wx.wizard import Wizard
+    from wx.wizard import PyWizardPage as WizardPage
+    wiz = wx.wizard  # wxPython wizard class
+
 import bosh, balt, bolt, bush
 from balt import vspace, hspace
 import win32api
@@ -77,19 +82,44 @@ class WizardReturn(object):
         self.PageSize = balt.defSize
         self.Pos = balt.defPos
 
+class DummyWizardPage(WizardPage):
+    def __init__(self, parent):
+        WizardPage.__init__(self, parent)
+    # TODO: PHOENIX apparently likes it to be a class...
+    ####     self.next = self.prev = None
+    ####
+    #### def SetNext(self, next):
+    ####     """Set the next page."""
+    ####     self.next = next
+    ####
+    #### def SetPrev(self, prev):
+    ####     """Set the previous page."""
+    ####     self.prev = prev
+    ####
+    #### def GetNext(self):
+    ####     """Return the next page."""
+    ####     # NotImplementedError: WizardPage.GetNext() is abstract and must be overridden
+    ####     return self.next
+    ####
+    #### def GetPrev(self):
+    ####     """Return the previous page."""
+    ####     # NotImplementedError: WizardPage.GetNext() is abstract and must be overridden
+    ####     return self.prev
+
 # InstallerWizard ----------------------------------
 #  Class used by Wrye Bash, creates a wx Wizard that
 #  dynamically creates pages based on a script
 #---------------------------------------------------
-class InstallerWizard(wiz.Wizard):
+class InstallerWizard(Wizard):
     def __init__(self, parentWindow, installer, bAuto, subs, pageSize, pos):
-        wiz.Wizard.__init__(self, parentWindow, title=_(u'Installer Wizard'),
+        Wizard.__init__(self, parentWindow, title=_(u'Installer Wizard'),
                             pos=pos, style=wx.DEFAULT_DIALOG_STYLE |
                                            wx.RESIZE_BORDER | wx.MAXIMIZE_BOX)
 
         #'dummy' page tricks the wizard into always showing the "Next" button,
         #'next' will be set by the parser
-        self.dummy = wiz.PyWizardPage(self)
+        ### self.dummy = WizardPage(self)
+        self.dummy = DummyWizardPage(self)  # PHOENIX TESTING
         self.next = None
 
         #True prevents actually moving to the 'next' page.  We use this after the "Next"
@@ -181,10 +211,10 @@ class InstallerWizard(wiz.Wizard):
 #  base class for all the parser wizard pages, just to handle
 #  a couple simple things here
 #-------------------------------------------------------------
-class PageInstaller(wiz.PyWizardPage):
+class PageInstaller(WizardPage):
 
     def __init__(self, parent):
-        wiz.PyWizardPage.__init__(self, parent)
+        WizardPage.__init__(self, parent)
         self.parent = parent
         self._enableForward(True)
 
