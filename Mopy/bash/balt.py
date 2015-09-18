@@ -395,6 +395,8 @@ class ComboBox(wx.ComboBox):
             self.Bind(wx.EVT_TEXT, self.OnChange)
 
     def OnChange(self, event):
+        if not self:  # App is closing. Avoid wx.PyDeadObjectError/RuntimeError!
+            return
         if self.GetClientSize()[0] < self.GetTextExtent(self.GetValue())[0]+30:
             self.SetToolTip(tooltip(self.GetValue()))
         else:

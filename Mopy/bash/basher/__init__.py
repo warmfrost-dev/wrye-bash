@@ -3803,6 +3803,8 @@ class BashFrame(wx.Frame):
     def RefreshData(self, event=None, booting=False):
         """Refresh all data - window activation event callback, called also
         on boot."""
+        if not self.notebook.currentPage:  # App is closing. Avoid wx.PyAssertionError/wx.wxAssertionError!
+            return
         #--Ignore deactivation events.
         if event and not event.GetActive() or self.inRefreshData: return
         #--UPDATES-----------------------------------------
