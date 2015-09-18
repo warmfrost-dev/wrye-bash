@@ -30,6 +30,13 @@
 # a problem with Python that doesn't work with these
 import imp, os, sys
 
+# Test with multiple wx versions.
+# NOTE: you may have to modify your wx.pth in site-packages.
+## import wxversion
+## wxversion.select('2.8-msw-unicode')    # CLASSIC: wxPython 2.8.12.1 (msw-unicode)
+## wxversion.select('3.0-msw')            # CLASSIC: wxPython 3.0.2.0
+## wxversion.select('3.0.3-msw-phoenix')  # PHOENIX: wxPython 3.0.3.dev1820+49a8884 msw (phoenix)
+
 class UnicodeImporter(object):
     def find_module(self,fullname,path=None):
         if isinstance(fullname,unicode):
