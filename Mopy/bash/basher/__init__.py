@@ -64,6 +64,16 @@ from types import ClassType
 #--wxPython
 import collections
 import wx
+if 'phoenix' in wx.version():  # ===PHOENIX PORTING HACKS & FIXES===
+    import wx.adv  # PHOENIX import
+    wx.SplashScreen = wx.adv.SplashScreen  # PHOENIX quick HACK
+    wx.SPLASH_CENTRE_ON_SCREEN = wx.adv.SPLASH_CENTRE_ON_SCREEN  # PHOENIX quick HACK
+    wx.SPLASH_NO_TIMEOUT = wx.adv.SPLASH_NO_TIMEOUT  # PHOENIX quick HACK
+    wx.LayoutAlgorithm = wx.adv.LayoutAlgorithm  # PHOENIX quick HACK
+    wx.StockCursor = wx.Cursor  # PHOENIX quick HACK
+    wx.SW_BORDER = wx.SP_BORDER  # PHOENIX quick HACK
+    wx.EmptyBitmap = wx.Bitmap  # PHOENIX wxPyDeprecationWarning HACK
+    wx.ListEvent.m_itemIndex = wx.ListEvent.Index  # wx28/PHOENIX FIX quick HACK
 
 #--Localization
 #..Handled by bosh, so import that.
@@ -510,6 +520,7 @@ class MasterList(_ModsUIList):
 
     def OnLabelEdited(self,event):
         itemDex = event.m_itemIndex
+        #### itemDex = event.Index  # wx28/PHOENIX FIX
         newName = GPath(event.GetText())
         #--No change?
         if newName in bosh.modInfos:
@@ -688,8 +699,10 @@ class INITweakLineCtrl(INIListCtrl):
             #--Line
             if i >= num:
                 self.InsertStringItem(i, line[0])
+                #### self.InsertItem(i, line[0])  # PHOENIX FIX
             else:
                 self.SetStringItem(i, 0, line[0])
+                #### self.SetItem(i, 0, line[0])  # PHOENIX FIX
             #--Line color
             status, deleted = line[4], line[6]
             if status == -10: color = colors['tweak.bkgd.invalid']
@@ -736,8 +749,10 @@ class TargetINILineCtrl(INIListCtrl):
             for i,line in enumerate(lines):
                 if i >= num:
                     self.InsertStringItem(i, line.rstrip())
+                    #### self.InsertItem(i, line.rstrip())  # PHOENIX FIX
                 else:
                     self.SetStringItem(i, 0, line.rstrip())
+                    #### self.SetItem(i, 0, line.rstrip())  # PHOENIX FIX
             for i in xrange(len(lines), num):
                 self.DeleteItem(len(lines))
         except IOError:
@@ -3417,7 +3432,7 @@ class _Tab_Link(AppendableLink, CheckLink, EnabledLink):
                 Link.Frame.notebook.InsertPage(insertAt,panel,title)
         bass.settings['bash.tabs.order'][self.tabKey] ^= True
 
-class BashNotebook(wx.Notebook, balt.TabDragMixin):
+class BashNotebook(wx.Notebook):  #, balt.TabDragMixin # PHOENIX TODO balt.TabDragMixin causes error
 
     # default tabs order and default enabled state, keys as in tabInfo
     _tabs_enabled_ordered = OrderedDict((('Installers', True),
@@ -3454,7 +3469,7 @@ class BashNotebook(wx.Notebook, balt.TabDragMixin):
 
     def __init__(self, parent):
         wx.Notebook.__init__(self, parent)
-        balt.TabDragMixin.__init__(self)
+        ### balt.TabDragMixin.__init__(self)  # PHOENIX TODO balt.TabDragMixin causes error
         #--Pages
         iInstallers = iMods = -1
         for page, enabled in self._tabOrder().items():
