@@ -21,12 +21,11 @@
 #  https://github.com/wrye-bash
 #
 # =============================================================================
-import os
 import re
 import subprocess
 
 import bass
-from bolt import startupinfo, StateError, GPath, deprint
+from bolt import startupinfo, StateError, GPath, deprint, walkdir
 
 exe7z = u'7z.exe'
 defaultExt = u'.7z'
@@ -45,7 +44,7 @@ reListArchive = re.compile(
 def compress7z(command, outDir, destArchive, srcDir, progress=None):
     outFile = outDir.join(destArchive)
     if progress is not None: #--Used solely for the progress bar
-        length = sum([len(files) for x, y, files in os.walk(srcDir.s)])
+        length = sum([len(files) for x, y, files in walkdir(srcDir.s)])
         progress(0, destArchive.s + u'\n' + _(u'Compressing files...'))
         progress.setFull(1 + length)
     #--Pack the files

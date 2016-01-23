@@ -46,6 +46,7 @@ you need:
 for your Python
 * [comtypes 0.6.2 or later](https://sourceforge.net/projects/comtypes/files/comtypes/)
 for your Python
+* Optionally [scandir](https://pypi.python.org/pypi/scandir/1.2) - recommended.
 
 **NB**: the 32-bit versions are required even if you are on a 64-bit
 operating system.

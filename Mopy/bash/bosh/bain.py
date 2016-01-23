@@ -1279,7 +1279,7 @@ class InstallerProject(Installer):
         pending, pending_size = {}, 0
         new_sizeCrcDate = {}
         oldGet = self.src_sizeCrcDate.get
-        walk = self._dir_dirs_files if self._dir_dirs_files is not None else os.walk(asRoot)
+        walk = self._dir_dirs_files if self._dir_dirs_files is not None else bolt.walkdir(asRoot)
         for asDir, __sDirs, sFiles in walk:
             progress(0.05, progress_msg + (u'\n%s' % asDir[relPos:]))
             get_mtime = os.path.getmtime(asDir)
@@ -1313,7 +1313,7 @@ class InstallerProject(Installer):
         c, size = [], 0
         cExtend, cAppend = c.extend, c.append
         self._dir_dirs_files = []
-        for root, d, files in os.walk(apath.s):
+        for root, d, files in bolt.walkdir(apath.s):
             cAppend(getM(root))
             stats = [_lstat(join(root, fi)) for fi in files]
             cExtend(fi.st_mtime for fi in stats)
@@ -1335,7 +1335,7 @@ class InstallerProject(Installer):
         """Removes empty directories from project directory."""
         empties = set()
         projectDir = bass.dirs['installers'].join(name)
-        for asDir,sDirs,sFiles in os.walk(projectDir.s):
+        for asDir,sDirs,sFiles in bolt.walkdir(projectDir.s):
             if not (sDirs or sFiles): empties.add(GPath(asDir))
         for empty in empties: empty.removedirs()
         projectDir.makedirs() #--In case it just got wiped out.
@@ -1895,7 +1895,7 @@ class InstallersData(DataStore):
         dirDirsFilesAppend, emptyDirsAdd = dirDirsFiles.append, emptyDirs.add
         asRoot = bass.dirs['mods'].s
         relPos = len(asRoot) + 1
-        for asDir, sDirs, sFiles in os.walk(asRoot):
+        for asDir, sDirs, sFiles in bolt.walkdir(asRoot):
             progress(0.05, progress_msg + (u'\n%s' % asDir[relPos:]))
             if not (sDirs or sFiles): emptyDirsAdd(GPath(asDir))
             if asDir == asRoot: InstallersData._skips_in_data_dir(sDirs)

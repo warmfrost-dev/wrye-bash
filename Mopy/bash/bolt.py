@@ -55,6 +55,14 @@ if os.name == u'nt':
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
+# speed up os.walk
+try:
+    import scandir
+    _walk = walkdir = scandir.walk
+except ImportError:
+    _walk = walkdir = os.walk
+    scandir = None
+
 # Unicode ---------------------------------------------------------------------
 #--decode unicode strings
 #  This is only useful when reading fields from mods, as the encoding is not
@@ -717,7 +725,7 @@ class Path(object):
             join = os.path.join
             getSize = os.path.getsize
             try:
-                return sum([sum(map(getSize,map(lambda z: join(x,z),files))) for x,y,files in os.walk(self._s)])
+                return sum([sum(map(getSize,map(lambda z: join(x,z),files))) for x,y,files in _walk(self._s)])
             except ValueError:
                 return 0
         else:
@@ -803,10 +811,10 @@ class Path(object):
         """Like os.walk."""
         if relative:
             start = len(self._s)
-            for root,dirs,files in os.walk(self._s,topdown,onerror):
+            for root,dirs,files in _walk(self._s,topdown,onerror):
                 yield (GPath(root[start:]),[GPath(x) for x in dirs],[GPath(x) for x in files])
         else:
-            for root,dirs,files in os.walk(self._s,topdown,onerror):
+            for root,dirs,files in _walk(self._s,topdown,onerror):
                 yield (GPath(root),[GPath(x) for x in dirs],[GPath(x) for x in files])
 
     def split(self):
@@ -866,7 +874,7 @@ class Path(object):
             except UnicodeError:
                 flags = stat.S_IWUSR|stat.S_IWOTH
                 chmod = os.chmod
-                for root,dirs,files in os.walk(self._s):
+                for root,dirs,files in _walk(self._s):
                     rootJoin = root.join
                     for directory in dirs:
                         try: chmod(rootJoin(directory),flags)
