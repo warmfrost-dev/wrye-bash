@@ -26,9 +26,22 @@
    Skyrim is set at the active game."""
 import re
 import struct
-from constants import *
+from .constants import *
 from ... import brec
-from records import *
+from .records import MreActi, MreAddn, MreAlch, MreAloc, MreAmef, MreAmmo, \
+    MreAnio, MreArma, MreArmo, MreAspc, MreAvif, MreBook, MreBptd, MreCams, \
+    MreCcrd, MreCdck, MreChal, MreChip, MreClas, MreClmt, MreCmny, MreCobj, \
+    MreCont, MreCpth, MreCrea, MreCsno, MreCsty, MreDebr, MreDehy, MreDobj, \
+    MreDoor, MreEczn, MreEfsh, MreEnch, MreExpl, MreEyes, MreFact, MreFlst, \
+    MreFurn, MreGras, MreHair, MreHdpt, MreHung, MreIdle, MreIdlm, MreImad, \
+    MreImgs, MreImod, MreIngr, MreIpct, MreIpds, MreKeym, MreLgtm, MreLigh, \
+    MreLscr, MreLsct, MreLtex, MreLvlc, MreLvli, MreLvln, MreMesg, MreMgef, \
+    MreMicn, MreMisc, MreMset, MreMstt, MreMusc, MreNote, MreNpc, MrePack, \
+    MrePerk, MreProj, MrePwat, MreQust, MreRace, MreRads, MreRcct, MreRcpe, \
+    MreRegn, MreRepu, MreRgdl, MreScol, MreScpt, MreSlpd, MreSoun, MreSpel, \
+    MreStat, MreTact, MreTerm, MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, \
+    MreWthr, MreAchr, MreAcre, MreCell, MreDial, MreGmst, MreInfo, MreNavi, \
+    MreNavm, MrePgre, MrePmis, MreRefr, MreWrld, MreHeader
 from ...brec import MreGlob, BaseRecordHeader, ModError
 
 #--Name of the game to use in UI.
@@ -401,17 +414,19 @@ class esp:
     stringsFiles = []
 
     #--Top types in FalloutNV order.
-    topTypes = ['GMST', 'TXST', 'MICN', 'GLOB', 'CLAS', 'FACT', 'HDPT', 'HAIR', 'EYES',
-        'RACE', 'SOUN', 'ASPC', 'MGEF', 'SCPT', 'LTEX', 'ENCH', 'SPEL', 'ACTI', 'TACT',
-        'TERM', 'ARMO', 'BOOK', 'CONT', 'DOOR', 'INGR', 'LIGH', 'MISC', 'STAT', 'SCOL',
-        'MSTT', 'PWAT', 'GRAS', 'TREE', 'FURN', 'WEAP', 'AMMO', 'NPC_', 'CREA', 'LVLC',
-        'LVLN', 'KEYM', 'ALCH', 'IDLM', 'NOTE', 'COBJ', 'PROJ', 'LVLI', 'WTHR', 'CLMT',
-        'REGN', 'NAVI', 'DIAL', 'QUST', 'IDLE', 'PACK', 'CSTY', 'LSCR', 'ANIO', 'WATR',
-        'EFSH', 'EXPL', 'DEBR', 'IMGS', 'IMAD', 'FLST', 'PERK', 'BPTD', 'ADDN', 'AVIF',
-        'RADS', 'CAMS', 'CPTH', 'VTYP', 'IPCT', 'IPDS', 'ARMA', 'ECZN', 'MESG', 'RGDL',
-        'DOBJ', 'LGTM', 'MUSC', 'IMOD', 'REPU', 'RCPE', 'RCCT', 'CHIP', 'CSNO', 'LSCT',
-        'MSET', 'ALOC', 'CHAL', 'AMEF', 'CCRD', 'CMNY', 'CDCK', 'DEHY', 'HUNG', 'SLPD',
-        'CELL', 'WRLD',]
+    topTypes = ['GMST', 'TXST', 'MICN', 'GLOB', 'CLAS', 'FACT', 'HDPT', 'HAIR',
+                'EYES', 'RACE', 'SOUN', 'ASPC', 'MGEF', 'SCPT', 'LTEX', 'ENCH',
+                'SPEL', 'ACTI', 'TACT', 'TERM', 'ARMO', 'BOOK', 'CONT', 'DOOR',
+                'INGR', 'LIGH', 'MISC', 'STAT', 'SCOL', 'MSTT', 'PWAT', 'GRAS',
+                'TREE', 'FURN', 'WEAP', 'AMMO', 'NPC_', 'CREA', 'LVLC', 'LVLN',
+                'KEYM', 'ALCH', 'IDLM', 'NOTE', 'COBJ', 'PROJ', 'LVLI', 'WTHR',
+                'CLMT', 'REGN', 'NAVI', 'DIAL', 'QUST', 'IDLE', 'PACK', 'CSTY',
+                'LSCR', 'ANIO', 'WATR', 'EFSH', 'EXPL', 'DEBR', 'IMGS', 'IMAD',
+                'FLST', 'PERK', 'BPTD', 'ADDN', 'AVIF', 'RADS', 'CAMS', 'CPTH',
+                'VTYP', 'IPCT', 'IPDS', 'ARMA', 'ECZN', 'MESG', 'RGDL', 'DOBJ',
+                'LGTM', 'MUSC', 'IMOD', 'REPU', 'RCPE', 'RCCT', 'CHIP', 'CSNO',
+                'LSCT', 'MSET', 'ALOC', 'CHAL', 'AMEF', 'CCRD', 'CMNY', 'CDCK',
+                'DEHY', 'HUNG', 'SLPD', 'CELL', 'WRLD', ]
 
     #--Dict mapping 'ignored' top types to un-ignored top types.
     topIgTypes = dict()
@@ -505,17 +520,19 @@ class RecordHeader(BaseRecordHeader):
 # MreTerm, MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, MreWthr,
 
 mergeClasses = (
-        MreActi, MreAddn, MreAlch, MreAloc, MreAmef, MreAmmo, MreAnio, MreArma, MreArmo, MreAspc,
-        MreAvif, MreBook, MreBptd, MreCams, MreCcrd, MreCdck, MreChal, MreChip, MreClas, MreClmt,
-        MreCmny, MreCobj, MreCont, MreCpth, MreCrea, MreCsno, MreCsty, MreDebr, MreDehy, MreDobj,
-        MreDoor, MreEczn, MreEfsh, MreEnch, MreExpl, MreEyes, MreFact, MreFlst, MreFurn, MreGlob,
-        MreGras, MreHair, MreHdpt, MreHung, MreIdle, MreIdlm, MreImad, MreImgs, MreImod, MreIngr,
-        MreIpct, MreIpds, MreKeym, MreLgtm, MreLigh, MreLscr, MreLsct, MreLtex, MreLvlc, MreLvli,
-        MreLvln, MreMesg, MreMgef, MreMicn, MreMisc, MreMset, MreMstt, MreMusc, MreNote, MreNpc,
-        MrePack, MrePerk, MreProj, MrePwat, MreQust, MreRace, MreRads, MreRcct, MreRcpe, MreRegn,
-        MreRepu, MreRgdl, MreScol, MreScpt, MreSlpd, MreSoun, MreSpel, MreStat, MreTact, MreTerm,
-        MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, MreWthr,
-    )
+    MreActi, MreAddn, MreAlch, MreAloc, MreAmef, MreAmmo, MreAnio, MreArma,
+    MreArmo, MreAspc, MreAvif, MreBook, MreBptd, MreCams, MreCcrd, MreCdck,
+    MreChal, MreChip, MreClas, MreClmt, MreCmny, MreCobj, MreCont, MreCpth,
+    MreCrea, MreCsno, MreCsty, MreDebr, MreDehy, MreDobj, MreDoor, MreEczn,
+    MreEfsh, MreEnch, MreExpl, MreEyes, MreFact, MreFlst, MreFurn, MreGlob,
+    MreGras, MreHair, MreHdpt, MreHung, MreIdle, MreIdlm, MreImad, MreImgs,
+    MreImod, MreIngr, MreIpct, MreIpds, MreKeym, MreLgtm, MreLigh, MreLscr,
+    MreLsct, MreLtex, MreLvlc, MreLvli, MreLvln, MreMesg, MreMgef, MreMicn,
+    MreMisc, MreMset, MreMstt, MreMusc, MreNote, MreNpc, MrePack, MrePerk,
+    MreProj, MrePwat, MreQust, MreRace, MreRads, MreRcct, MreRcpe, MreRegn,
+    MreRepu, MreRgdl, MreScol, MreScpt, MreSlpd, MreSoun, MreSpel, MreStat,
+    MreTact, MreTerm, MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, MreWthr,
+)
 
 #--Extra read classes: these record types will always be loaded, even if patchers
 #  don't need them directly (for example, for MGEF info)
@@ -548,19 +565,21 @@ def init():
 
     #--Record Types
     brec.MreRecord.type_class = dict((x.classType,x) for x in (
-        MreActi, MreAddn, MreAlch, MreAloc, MreAmef, MreAmmo, MreAnio, MreArma, MreArmo, MreAspc,
-        MreAvif, MreBook, MreBptd, MreCams, MreCcrd, MreCdck, MreChal, MreChip, MreClas, MreClmt,
-        MreCmny, MreCobj, MreCont, MreCpth, MreCrea, MreCsno, MreCsty, MreDebr, MreDehy, MreDobj,
-        MreDoor, MreEczn, MreEfsh, MreEnch, MreExpl, MreEyes, MreFact, MreFlst, MreFurn, MreGlob,
-        MreGras, MreHair, MreHdpt, MreHung, MreIdle, MreIdlm, MreImad, MreImgs, MreImod, MreIngr,
-        MreIpct, MreIpds, MreKeym, MreLgtm, MreLigh, MreLscr, MreLsct, MreLtex, MreLvlc, MreLvli,
-        MreLvln, MreMesg, MreMgef, MreMicn, MreMisc, MreMset, MreMstt, MreMusc, MreNote, MreNpc,
-        MrePack, MrePerk, MreProj, MrePwat, MreQust, MreRace, MreRads, MreRcct, MreRcpe, MreRegn,
-        MreRepu, MreRgdl, MreScol, MreScpt, MreSlpd, MreSoun, MreSpel, MreStat, MreTact, MreTerm,
-        MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, MreWthr,
+        MreActi, MreAddn, MreAlch, MreAloc, MreAmef, MreAmmo, MreAnio, MreArma,
+        MreArmo, MreAspc, MreAvif, MreBook, MreBptd, MreCams, MreCcrd, MreCdck,
+        MreChal, MreChip, MreClas, MreClmt, MreCmny, MreCobj, MreCont, MreCpth,
+        MreCrea, MreCsno, MreCsty, MreDebr, MreDehy, MreDobj, MreDoor, MreEczn,
+        MreEfsh, MreEnch, MreExpl, MreEyes, MreFact, MreFlst, MreFurn, MreGlob,
+        MreGras, MreHair, MreHdpt, MreHung, MreIdle, MreIdlm, MreImad, MreImgs,
+        MreImod, MreIngr, MreIpct, MreIpds, MreKeym, MreLgtm, MreLigh, MreLscr,
+        MreLsct, MreLtex, MreLvlc, MreLvli, MreLvln, MreMesg, MreMgef, MreMicn,
+        MreMisc, MreMset, MreMstt, MreMusc, MreNote, MreNpc, MrePack, MrePerk,
+        MreProj, MrePwat, MreQust, MreRace, MreRads, MreRcct, MreRcpe, MreRegn,
+        MreRepu, MreRgdl, MreScol, MreScpt, MreSlpd, MreSoun, MreSpel, MreStat,
+        MreTact, MreTerm, MreTree, MreTxst, MreVtyp, MreWatr, MreWeap, MreWthr,
         # Not Mergable
-        MreAchr, MreAcre, MreCell, MreDial, MreGmst, MreInfo, MreNavi, MreNavm, MrePgre, MrePmis,
-        MreRefr, MreWrld,
+        MreAchr, MreAcre, MreCell, MreDial, MreGmst, MreInfo, MreNavi, MreNavm,
+        MrePgre, MrePmis, MreRefr, MreWrld,
         MreHeader,
         ))
 

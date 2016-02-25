@@ -24,7 +24,7 @@
 
 #--Game ESM/ESP/BSA files
 #  These filenames need to be in lowercase,
-bethDataFiles = set((
+bethDataFiles = {
     #--Vanilla
     ur'fallout3.esm',
     ur'fallout - menuvoices.bsa',
@@ -49,10 +49,10 @@ bethDataFiles = set((
     ur'zeta.esm',
     ur'zeta - main.bsa',
     ur'zeta - sounds.bsa',
-    ))
+}
 
 #--Every file in the Data directory from Bethsoft
-allBethFiles = set((
+allBethFiles = {
     # Section 1: Vanilla files
     ur'Credits.txt',
     ur'CreditsWacky.txt',
@@ -192,7 +192,8 @@ allBethFiles = set((
     ur'zeta - main.bsa',
     ur'zeta - sounds.bsa',
     ur'DLCList.txt',
-    ))
+}
+
 # Function Info ---------------------------------------------------------------
 conditionFunctionData = ( #--0: no param; 1: int param; 2: formid param
     (  1, 'GetDistance', 2, 0),
@@ -737,26 +738,24 @@ GmstTweaks = [
         (_(u'Custom'),150),
         ),
     ]
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # ListsMerger
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 listTypes = ('LVLC','LVLI','LVLN')
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # NamesPatcher
-#-------------------------------------------------------------------------------
-namesTypes = set((
-    'ACTI', 'ALCH', 'AMMO', 'ARMO', 'BOOK', 'CLAS', 'CONT', 'CREA', 'DOOR', 'EYES',
-    'FACT', 'HAIR', 'INGR', 'KEYM', 'LIGH', 'MISC', 'NOTE', 'NPC_', 'RACE', 'SPEL',
-    'TACT', 'TERM', 'WEAP',
-        ))
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+namesTypes = {'ACTI', 'ALCH', 'AMMO', 'ARMO', 'BOOK', 'CLAS', 'CONT', 'CREA',
+              'DOOR', 'EYES', 'FACT', 'HAIR', 'INGR', 'KEYM', 'LIGH', 'MISC',
+              'NOTE', 'NPC_', 'RACE', 'SPEL', 'TACT', 'TERM', 'WEAP'}
+#------------------------------------------------------------------------------
 # ItemPrices Patcher
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 pricesTypes = {'ALCH':{},'AMMO':{},'ARMO':{},'ARMA':{},'BOOK':{},'INGR':{},'KEYM':{},'LIGH':{},'MISC':{},'WEAP':{}}
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # StatsImporter
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 statsTypes = {
         'ALCH':('eid', 'weight', 'value'),
         'AMMO':('eid', 'value', 'speed', 'clipRounds'),
@@ -829,14 +828,13 @@ statsHeaders = (
             _(u'Crit % Mult'))) + '"\n')),
         )
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # SoundPatcher
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Needs longs in SoundPatcher
-soundsLongsTypes = set((
-    'ACTI', 'ADDN', 'ALCH', 'ASPC', 'CONT', 'CREA', 'DOOR', 'EXPL', 'IPCT', 'LIGH',
-    'MGEF', 'PROJ', 'SOUN', 'TACT', 'WATR', 'WEAP', 'WTHR',
-))
+soundsLongsTypes = {'ACTI', 'ADDN', 'ALCH', 'ASPC', 'CONT', 'CREA', 'DOOR',
+                    'EXPL', 'IPCT', 'LIGH', 'MGEF', 'PROJ', 'SOUN', 'TACT',
+                    'WATR', 'WEAP', 'WTHR'}
 soundsTypes = {
     "ACTI": ('soundLooping','soundActivation',),
     "ADDN": ('ambientSound',),
@@ -864,12 +862,12 @@ soundsTypes = {
 soundsFidTypes = {
 }
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # CellImporter
-#-------------------------------------------------------------------------------
-cellAutoKeys = (
-    u'C.Acoustic',u'C.Climate',u'C.Encounter',u'C.ImageSpace',u'C.Light',
-    u'C.Music',u'C.Name',u'C.Owner',u'C.RecordFlags',u'C.Water',)#,u'C.Maps')
+#------------------------------------------------------------------------------
+cellAutoKeys = {u'C.Acoustic', u'C.Climate', u'C.Encounter', u'C.ImageSpace',
+                u'C.Light', u'C.Music', u'C.Name', u'C.Owner',
+                u'C.RecordFlags', u'C.Water'} #,u'C.Maps'}
 cellRecAttrs = {
             u'C.Acoustic': ('acousticSpace',),
             u'C.Climate': ('climate',),
@@ -899,14 +897,13 @@ cellRecFlags = {
             u'C.RecordFlags': '',
             u'C.Water': 'hasWater',
             }
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # GraphicsPatcher
-#-------------------------------------------------------------------------------
-graphicsLongsTypes = set((
-    'ACTI', 'ALCH', 'AMMO', 'ARMA', 'ARMO', 'BOOK', 'CLAS', 'CREA', 'DOOR', 'EFSH',
-    'EXPL', 'FURN', 'GRAS', 'INGR', 'KEYM', 'LIGH', 'LSCR', 'LTEX', 'MISC', 'NPC_',
-    'STAT', 'TREE', 'WEAP', 'MGEF',
-    ))
+#------------------------------------------------------------------------------
+graphicsLongsTypes = {'ACTI', 'ALCH', 'AMMO', 'ARMA', 'ARMO', 'BOOK', 'CLAS',
+                      'CREA', 'DOOR', 'EFSH', 'EXPL', 'FURN', 'GRAS', 'INGR',
+                      'KEYM', 'LIGH', 'LSCR', 'LTEX', 'MISC', 'NPC_', 'STAT',
+                      'TREE', 'WEAP', 'MGEF'}
 graphicsTypes = {
     "ACTI": ('model',),
     "ALCH": ('iconPath','model',),
@@ -966,13 +963,13 @@ graphicsFidTypes = {
     "MGEF": ('effectShader','light','objectDisplayShader','cefEnchantment',)
 }
 graphicsModelAttrs = ('model','shellCasingModel','scopeModel','worldModel')
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Inventory Patcher
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 inventoryTypes = ('CREA','NPC_','CONT',)
-#-------------------------------------------------------------------------------
-# Mod Record Elements ----------------------------------------------------------
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Mod Record Elements ---------------------------------------------------------
+#------------------------------------------------------------------------------
 FID = 'FID' #--Used by MelStruct classes to indicate fid elements.
 
 # Record type to name dictionary
