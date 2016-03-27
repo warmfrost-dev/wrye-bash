@@ -28,9 +28,12 @@
 import struct
 from .constants import *
 from .default_tweaks import default_tweaks
-from .records import MreHeader, MreLvli, MreLvln
+from .records import MreHeader, MreGmst, MreFact, MreLtex, MreEnch, MreGras, \
+    MreTree, MreClmt, MreRfct, MreAnio, MreDebr, MreCpth, MreVtyp, MreIpds, \
+    MreEczn, MreDobj, MreMusc, MreFstp, MreFsts, MreSmen, MreDlbr, MreDlvw, \
+    MreRela, MreAstp, MreOtft, MreMato, MreColl, MreClfm
 from ... import brec
-from ...brec import BaseRecordHeader, ModError
+from ...brec import MreGlob, BaseRecordHeader, ModError
 
 #--Name of the game to use in UI.
 displayName = u'Fallout 4'
@@ -291,26 +294,26 @@ class esp:
     ]
 
     #--Top types in Skyrim order.
-    topTypes = ['GMST', 'KYWD', 'LCRT', 'AACT', 'TRNS', 'CMPO', 'TXST',
-                'GLOB', 'DMGT', 'CLAS', 'FACT', 'HDPT', 'RACE', 'SOUN',
-                'ASPC', 'MGEF', 'LTEX', 'ENCH', 'SPEL', 'ACTI', 'TACT',
-                'ARMO', 'BOOK', 'CONT', 'DOOR', 'INGR', 'LIGH', 'MISC',
-                'STAT', 'SCOL', 'MSTT', 'GRAS', 'TREE', 'FLOR', 'FURN',
-                'WEAP', 'AMMO', 'NPC_', 'LVLN', 'KEYM', 'ALCH', 'IDLM',
-                'NOTE', 'PROJ', 'HAZD', 'BNDS', 'TERM', 'GRAS', 'TREE',
-                'FURN', 'WEAP', 'AMMO', 'NPC_', 'LVLN', 'KEYM', 'ALCH',
-                'IDLM', 'NOTE', 'PROJ', 'HAZD', 'BNDS', 'LVLI', 'WTHR',
-                'CLMT', 'SPGD', 'RFCT', 'REGN', 'NAVI', 'CELL', 'WRLD',
-                'QUST', 'IDLE', 'PACK', 'CSTY', 'LSCR', 'ANIO', 'WATR',
-                'EFSH', 'EXPL', 'DEBR', 'IMGS', 'IMAD', 'FLST', 'PERK',
-                'BPTD', 'ADDN', 'AVIF', 'CAMS', 'CPTH', 'VTYP', 'MATT',
-                'IPCT', 'IPDS', 'ARMA', 'ECZN', 'LCTN', 'MESG', 'DOBJ',
-                'DFOB', 'LGTM', 'MUSC', 'FSTP', 'FSTS', 'SMBN', 'SMQN',
-                'SMEN', 'MUST', 'DLVW', 'EQUP', 'RELA', 'ASTP', 'OTFT',
-                'ARTO', 'MATO', 'MOVT', 'SNDR', 'SNCT', 'SOPM', 'COLL',
-                'CLFM', 'REVB', 'PKIN', 'RFGP', 'AMDL', 'LAYR', 'COBJ',
-                'OMOD', 'MSWP', 'ZOOM', 'INNR', 'KSSM', 'AECH', 'SCCO',
-                'AORU', 'SCSN', 'STAG', 'NOCM', 'LENS', 'GDRY', 'OVIS',]
+    topTypes = ['GMST', 'KYWD', 'LCRT', 'AACT', 'TRNS', 'CMPO', 'TXST', 'MICN',
+                'GLOB', 'DMGT', 'CLAS', 'FACT', 'HDPT', 'EYES', 'RACE', 'SOUN',
+                'ASPC', 'SKIL', 'MGEF', 'SCPT', 'LTEX', 'ENCH', 'SPEL', 'SCRL',
+                'ACTI', 'TACT', 'ARMO', 'BOOK', 'CONT', 'DOOR', 'INGR', 'LIGH',
+                'MISC', 'STAT', 'SCOL', 'MSTT', 'GRAS', 'TREE', 'FLOR', 'FURN',
+                'WEAP', 'AMMO', 'NPC_', 'LVLN', 'KEYM', 'ALCH', 'IDLM', 'NOTE',
+                'PROJ', 'HAZD', 'BNDS', 'SLGM', 'TERM', 'LVLI', 'WTHR', 'CLMT',
+                'SPGD', 'RFCT', 'REGN', 'NAVI', 'CELL', 'REFR', 'ACHR', 'PMIS',
+                'PARW', 'PGRE', 'PBEA', 'PFLA', 'PCON', 'PBAR', 'PHZD', 'WRLD',
+                'LAND', 'NAVM', 'TLOD', 'DIAL', 'INFO', 'QUST', 'IDLE', 'PACK',
+                'CSTY', 'LSCR', 'LVSP', 'ANIO', 'WATR', 'EFSH', 'TOFT', 'EXPL',
+                'DEBR', 'IMGS', 'IMAD', 'FLST', 'PERK', 'BPTD', 'ADDN', 'AVIF',
+                'CAMS', 'CPTH', 'VTYP', 'MATT', 'IPCT', 'IPDS', 'ARMA', 'ECZN',
+                'LCTN', 'MESG', 'RGDL', 'DOBJ', 'DFOB', 'LGTM', 'MUSC', 'FSTP',
+                'FSTS', 'SMBN', 'SMQN', 'SMEN', 'DLBR', 'MUST', 'DLVW', 'WOOP',
+                'SHOU', 'EQUP', 'RELA', 'SCEN', 'ASTP', 'OTFT', 'ARTO', 'MATO',
+                'MOVT', 'SNDR', 'DUAL', 'SNCT', 'SOPM', 'COLL', 'CLFM', 'REVB',
+                'PKIN', 'RFGP', 'AMDL', 'LAYR', 'COBJ', 'OMOD', 'MSWP', 'ZOOM',
+                'INNR', 'KSSM', 'AECH', 'SCCO', 'AORU', 'SCSN', 'STAG', 'NOCM',
+                'LENS', 'LSPR', 'GDRY', 'OVIS', ]
 
     #--Dict mapping 'ignored' top types to un-ignored top types.
     topIgTypes = dict([
@@ -381,6 +384,24 @@ class RecordHeader(BaseRecordHeader):
                                self.fid,self.flags2,self.extra)
 
 #------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# CLDC ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# HAIR ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# PWAT ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# RGDL ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# SCOL ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Unused records, they have empty GRUP in skyrim.esm---------------------------
+# SCPT ------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # These Are normally not mergable but added to brec.MreRecord.type_class
 #
 #       MreCell,
@@ -394,10 +415,17 @@ class RecordHeader(BaseRecordHeader):
 #       MreAchr, MreDial, MreLctn, MreInfo, MreFact, MrePerk,
 #------------------------------------------------------------------------------
 #--Mergeable record types
-mergeClasses = tuple()
+mergeClasses = (
+    MreGmst, MreGlob, MreFact, MreLtex, MreEnch, MreGras, MreTree, MreClmt,
+    MreRfct, MreAnio, MreDebr, MreCpth, MreVtyp, MreIpds, MreEczn, MreDobj,
+    MreMusc, MreFstp, MreFsts, MreSmen, MreDlbr, MreDlvw, MreRela, MreAstp,
+    MreOtft, MreMato, MreColl, MreClfm,
+)
 
 #--Extra read classes: these record types will always be loaded, even if
 # patchers don't need them directly (for example, MGEF for magic effects info)
+# MreScpt is Oblivion/FO3/FNV Only
+# MreMgef, has not been verified to be used here for Skyrim
 readClasses = tuple()
 writeClasses = tuple()
 
@@ -411,11 +439,14 @@ def init():
 
     #--Record Types
     brec.MreRecord.type_class = dict((x.classType,x) for x in (
-        MreLvli, MreLvln,
+        MreGmst, MreGlob, MreFact, MreLtex, MreEnch, MreGras, MreTree, MreClmt,
+        MreRfct, MreAnio, MreDebr, MreCpth, MreVtyp, MreIpds, MreEczn, MreDobj,
+        MreMusc, MreFstp, MreFsts, MreSmen, MreDlbr, MreDlvw, MreRela, MreAstp,
+        MreOtft, MreMato, MreColl, MreClfm,
         ####### for debug
         MreHeader,
         ))
 
     #--Simple records
     brec.MreRecord.simpleTypes = (
-        set(brec.MreRecord.type_class) - {'TES4',})
+        set(brec.MreRecord.type_class) - {'TES4','ACHR','CELL','DIAL','INFO','WRLD',})
