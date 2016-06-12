@@ -41,7 +41,7 @@ import threading
 from functools import partial, wraps
 from collections import OrderedDict
 #--wx
-import wx
+from bass import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.embeddedimage import PyEmbeddedImage
 import wx.lib.newevent

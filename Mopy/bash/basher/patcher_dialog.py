@@ -28,11 +28,10 @@ import copy
 import errno
 import re
 import time
-import wx
 from datetime import timedelta
 from . import SetUAC, BashFrame
 from .. import bass, bosh, bolt, balt, env, load_order
-from ..bass import Resources
+from ..bass import Resources, wx
 from ..balt import StaticText, vSizer, hSizer, hspacer, Link, OkButton, \
     SelectAllButton, CancelButton, SaveAsButton, OpenButton, \
     RevertToSavedButton, RevertButton, hspace, vspace

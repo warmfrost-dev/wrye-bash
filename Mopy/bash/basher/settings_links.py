@@ -24,7 +24,6 @@
 
 import locale
 import sys
-import wx
 from ..balt import ItemLink, vSizer, hSizer, hspacer, Button, AppendableLink, \
     RadioLink, CheckLink, MenuLink, TransLink, EnabledLink, BoolLink, \
     StaticText, tooltip, Link, staticBitmap, hspace
@@ -33,6 +32,7 @@ from ..bolt import deprint, GPath
 from . import BashFrame, BashStatusBar
 from .dialogs import ColorDialog
 from .app_buttons import App_Button # TODO(ut): ugly
+from ..bass import wx
 # TODO(ut): settings links do not seem to use Link.data attribute - it's None..
 
 __all__ = ['Settings_BackupSettings', 'Settings_RestoreSettings',

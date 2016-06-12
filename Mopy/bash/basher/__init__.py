@@ -63,12 +63,11 @@ from operator import itemgetter
 from types import ClassType
 #--wxPython
 import collections
-import wx
 
 #--Localization
 #..Handled by bosh, so import that.
 from .. import bush, bosh, bolt, bass, env, load_order, archives
-from ..bass import Resources
+from ..bass import Resources, wx
 from ..bolt import BoltError, CancelError, SkipError, GPath, SubProgress, \
     deprint, AbstractError, formatInteger, formatDate, round_size
 from ..bosh import omods

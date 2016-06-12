@@ -25,9 +25,8 @@
 import StringIO
 import re
 import string
-import wx
 from .. import bass, balt, bosh, bolt, load_order
-from ..bass import Resources
+from ..bass import Resources, wx
 from ..balt import TextCtrl, StaticText, vSizer, hSizer, hspacer, Button, \
     RoTextCtrl, bitmapButton, bell, Link, toggleButton, SaveButton, \
     CancelButton, hspace, vspace
