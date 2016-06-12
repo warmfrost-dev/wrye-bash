@@ -63,7 +63,7 @@ from operator import itemgetter
 from types import ClassType
 #--wxPython
 import collections
-import wx
+from ..bass import wx
 if 'phoenix' in wx.version():  # ===PHOENIX PORTING HACKS & FIXES===
     import wx.adv  # PHOENIX import
     wx.SplashScreen = wx.adv.SplashScreen  # PHOENIX quick HACK

@@ -94,3 +94,19 @@ def newTempDir():
     from bolt import Path
     _tempDir = Path.tempDir()
     return _tempDir
+
+# Import wx once and for all
+
+WXVER = '3.0.2.0'
+import wxversion
+
+if wxversion.checkInstalled(WXVER):
+    wxversion.select(WXVER)
+    versionOK = True
+else:
+    versionOK = False
+
+try:
+    import wx
+except ImportError:
+    wx = None

@@ -29,7 +29,7 @@ import ScriptParser         # generic parser class
 import bass
 import load_order
 from ScriptParser import error
-import wx
+from bass import wx
 if 'phoenix' in wx.version():  # ===PHOENIX PORTING HACKS & FIXES===
     import wx.adv
     from wx.adv import Wizard

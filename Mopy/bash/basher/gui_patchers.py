@@ -25,13 +25,13 @@ import copy
 import string
 import re
 from operator import itemgetter
-import wx
 # Internal
 from .. import bass, bosh, bush, balt, load_order, bolt
 from ..balt import fill, StaticText, vSizer, checkBox, Button, hsbSizer, \
     Links, SeparatorLink, CheckLink, Link, vspace, VSizer
 from ..bolt import GPath
 from ..patcher import patch_files
+from ..bass import wx
 
 reCsvExt = re.compile(ur'\.csv$', re.I | re.U)
 

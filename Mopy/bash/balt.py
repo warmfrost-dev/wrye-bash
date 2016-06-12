@@ -41,7 +41,7 @@ import threading
 from functools import partial, wraps
 from collections import OrderedDict
 #--wx
-import wx
+from bass import wx
 if 'phoenix' in wx.version():  # ===PHOENIX PORTING HACKS & FIXES===
     wx.SystemSettings_GetFont = wx.SystemSettings.GetFont  # wx28/PHOENIX FIX quick HACK
     wx.PyDropTarget = wx.DropTarget  # PHOENIX quick HACK

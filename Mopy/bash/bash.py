@@ -45,14 +45,6 @@ import env
 basher = balt = barb = None
 is_standalone = hasattr(sys, 'frozen')
 
-def _import_wx():
-    """:rtype: wx | None"""
-    try:
-        import wx
-    except ImportError:
-        wx = None
-    return wx
-
 #------------------------------------------------------------------------------
 def SetHomePath(homePath):
     drive,path = os.path.splitdrive(homePath)
@@ -285,7 +277,7 @@ def dump_environment(_wx):
 # Main ------------------------------------------------------------------------
 def main():
     bolt.deprintOn = opts.debug
-    wx = _import_wx()
+    from bass import wx
     # useful for understanding context of bug reports
     if opts.debug or is_standalone:
         # Standalone stdout is NUL no matter what.   Redirect it to stderr.
