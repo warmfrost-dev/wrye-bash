@@ -309,12 +309,19 @@ def dumpTranslator(outPath,language,*files):
     return outTxt
 
 def initTranslator(language=None,path=None):
+    # if locale.getlocale() == (None,None):
+    #     locale.setlocale(locale.LC_ALL,u'')
     if not language:
         try:
-            language = locale.getlocale()[0].split('_',1)[0]
-            language = decode(language)
+            getlocale = locale.getlocale()
+            if getlocale[0] is not None:
+                language = getlocale[0].split('_', 1)[0]
+                language = decode(language)
+            else:
+                language = u'English'
         except UnicodeError:
-            deprint(u'Still unicode problems detecting locale:', repr(locale.getlocale()),traceback=True)
+            # deprint below will crash Bash if started from the bat file
+            # deprint(u'Still unicode problems detecting locale:', repr(locale.getlocale()),traceback=True)
             # Default to English
             language = u'English'
     path = path or os.path.join(u'bash',u'l10n')
@@ -351,8 +358,6 @@ def initTranslator(language=None,path=None):
     trans.install(unicode=True)
 
 #--Do translator test and set
-if locale.getlocale() == (None,None):
-    locale.setlocale(locale.LC_ALL,u'')
 initTranslator(bass.language)
 
 CBash = 0
