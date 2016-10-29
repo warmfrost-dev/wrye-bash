@@ -58,22 +58,32 @@ nexusUrl = u'http://www.nexusmods.com/fallout3/'
 nexusName = u'Fallout 3 Nexus'
 nexusKey = u'bash.installers.openFallout3Nexus'
 
+# Bsa info
+allow_reset_bsa_timestamps = True
+bsa_extension = ur'bsa'
+supports_mod_inis = False
+vanilla_string_bsas = {}
+resource_archives_keys = ()
+
+# Load order info
+using_txt_file = False
+
 #--GECK Set information
 class cs:
-    shortName = u'GECK'                  # Abbreviated name
-    longName = u'Garden of Eden Creation Kit'                   # Full name
-    exe = u'GECK.exe'                   # Executable to run
-    seArgs = u'-editor'                     # Argument to pass to the SE to load the CS
-    imageName = u'geck%s.png'                  # Image name template for the status bar
+    shortName = u'GECK'            # Abbreviated name
+    longName = u'Garden of Eden Creation Kit'     # Full name
+    exe = u'GECK.exe'              # Executable to run
+    seArgs = u'-editor'            # Argument to pass to the SE to load the CS
+    imageName = u'geck%s.png'      # Image name template for the status bar
 
 #--Script Extender information
 class se:
-    shortName = u'FOSE'                      # Abbreviated name
-    longName = u'Fallout 3 Script Extender'   # Full name
-    exe = u'fose_loader.exe'                 # Exe to run
+    shortName = u'FOSE'                     # Abbreviated name
+    longName = u'Fallout 3 Script Extender' # Full name
+    exe = u'fose_loader.exe'                # Exe to run
     steamExe = u'fose_loader.dll'           # Exe to run if a steam install
-    url = u'http://fose.silverlock.org/'     # URL to download from
-    urlTip = u'http://fose.silverlock.org/'  # Tooltip for mouse over the URL
+    url = u'http://fose.silverlock.org/'    # URL to download from
+    urlTip = u'http://fose.silverlock.org/' # Tooltip for mouse over the URL
 
 #--Script Dragon
 class sd:
@@ -145,118 +155,7 @@ class ess:
     canReadBasic = True         # All the basic stuff needed for the Saves Tab
     canEditMasters = True       # Adjusting save file masters
     canEditMore = False         # No advanced editing
-
-    # Save file extension.
-    ext = u'.fos';
-
-    @staticmethod
-    def load(ins,header):
-        """Extract basic info from save file.close
-           At a minimum, this should set the following
-           attrubutes in 'header':
-            pcName
-            pcLevel
-            pcLocation
-            gameDate
-            gameDays
-            gameTicks (seconds*1000)
-            image (ssWidth,ssHeight,ssData)
-            masters
-        """
-        if ins.read(11) != 'FO3SAVEGAME':
-            raise Exception(u'Save file is not a Fallout New Vegas save game.')
-        headerSize, = struct.unpack('I',ins.read(4))
-        unknown,delim = struct.unpack('Ic',ins.read(5))
-        ssWidth,delim1,ssHeight,delim2,ssDepth,delim3 = struct.unpack('=IcIcIc',ins.read(15))
-        #--Name, nickname, level, location, playtime
-        size,delim = struct.unpack('Hc',ins.read(3))
-        header.pcName = ins.read(size)
-        delim, = struct.unpack('c',ins.read(1))
-        size,delim = struct.unpack('Hc',ins.read(3))
-        header.pcNick = ins.read(size)
-        delim, = struct.unpack('c',ins.read(1))
-        header.pcLevel,delim = struct.unpack('Ic',ins.read(5))
-        size,delim = struct.unpack('Hc',ins.read(3))
-        header.pcLocation = ins.read(size)
-        delim, = struct.unpack('c',ins.read(1))
-        size,delim = struct.unpack('Hc',ins.read(3))
-        header.playTime = ins.read(size)
-        delim, = struct.unpack('c',ins.read(1))
-        #--Image Data
-        ssData = ins.read(3*ssWidth*ssHeight)
-        header.image = (ssWidth,ssHeight,ssData)
-        #--Masters
-        unknown,masterListSize = struct.unpack('=BI',ins.read(5))
-        if unknown != 0x15:
-            raise Exception(u'%s: Unknown byte is not 0x15.' % path)
-        del header.masters[:]
-        numMasters,delim = struct.unpack('Bc',ins.read(2))
-        for count in range(numMasters):
-            size,delim = struct.unpack('Hc',ins.read(3))
-            header.masters.append(ins.read(size))
-            delim, = struct.unpack('c',ins.read(1))
-
-
-    @staticmethod
-    def writeMasters(ins,out,header):
-        """Rewrites masters of existing save file."""
-        def unpack(format,size):
-            return struct.unpack(format,ins.read(size))
-        def pack(format,*args):
-            out.write(struct.pack(format,*args))
-        #--Header
-        out.write(ins.read(11))
-        #--SaveGameHeader
-        size, = unpack('I',4)
-        pack('I',size)
-        out.write(ins.read(5))
-        ssWidth,delim1,ssHeight,delim2 = unpack('=IcIc',10)
-        pack('=IcIc',ssWidth,delim1,ssHeight,delim2)
-        out.write(ins.read(size-15))
-        #--Image Data
-        out.write(ins.read(3*ssWidth*ssHeight))
-        #--Skip old masters
-        unknown,oldMasterListSize = unpack('=BI',5)
-        if unknown != 0x15:
-            raise Exception(u'%s: Unknown byte is not 0x15.' % path)
-        numMasters,delim = unpack('Bc',2)
-        oldMasters = []
-        for count in range(numMasters):
-            size,delim = unpack('Hc',3)
-            oldMasters.append(ins.read(size))
-            delim, = unpack('c',1)
-        #--Write new masters
-        newMasterListSize = 2 + (4 * len(header.masters))
-        for master in header.masters:
-            newMasterListSize += len(master)
-        pack('=BI',unknown,newMasterListSize)
-        pack('Bc',len(header.masters),'|')
-        for master in header.masters:
-            pack('Hc',len(master),'|')
-            out.write(master.s)
-            pack('c','|')
-        #--Fids Address
-        offset = out.tell() - ins.tell()
-        fidsAddress, = unpack('I',4)
-        pack('I',fidsAddress+offset)
-        #--???? Address
-        unknownAddress, = unpack('I',4)
-        pack('I',unknownAddress+offset)
-        #--???? Address
-        unknownAddress, = unpack('I',4)
-        pack('I',unknownAddress+offset)
-        #--???? Address
-        unknownAddress, = unpack('I',4)
-        pack('I',unknownAddress+offset)
-        #--???? Address
-        unknownAddress, = unpack('I',4)
-        pack('I',unknownAddress+offset)
-        #--Copy remainder
-        while True:
-            buffer = ins.read(0x5000000)
-            if not buffer: break
-            out.write(buffer)
-        return oldMasters
+    ext = u'.fos'               # Save file extension
 
 #--INI files that should show up in the INI Edits tab
 iniFiles = [
@@ -510,7 +409,7 @@ class esp:
     #--Valid ESM/ESP header versions
     validHeaderVersions = (0.85,0.94)
 
-    #--Strings Files, Skyrim only
+    #--Strings Files
     stringsFiles = []
 
     #--Class to use to read the TES4 record

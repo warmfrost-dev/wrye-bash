@@ -29,6 +29,7 @@
 """
 __author__ = 'Utumno'
 
+import copy
 import itertools
 import struct
 import sys
@@ -42,7 +43,12 @@ class SaveHeaderError(Exception): pass
 # Structure wrappers ----------------------------------------------------------
 def unpack_str8(ins): return ins.read(struct.unpack('B', ins.read(1))[0])
 def unpack_str16(ins): return ins.read(struct.unpack('H', ins.read(2))[0])
+def unpack_str16_delim(ins):
+    str_value = ins.read(struct.unpack('Hc', ins.read(3))[0])
+    ins.read(1) # discard delimiter
+    return str_value
 def unpack_int(ins): return struct.unpack('I', ins.read(4))[0]
+def unpack_int_delim(ins): return struct.unpack('Ic', ins.read(5))[0]
 def unpack_short(ins): return struct.unpack('H', ins.read(2))[0]
 def unpack_float(ins): return struct.unpack('f', ins.read(4))[0]
 def unpack_byte(ins): return struct.unpack('B', ins.read(1))[0]
@@ -272,6 +278,72 @@ class Fallout4SaveHeader(SkyrimSaveHeader): # pretty similar to skyrim
         self.gameTicks = (days * 24 * 60 * 60 + hours * 60 * 60 + minutes
                              * 60) * 1000
 
+class FalloutNVSaveHeader(SaveFileHeader):
+    save_magic = 'FO3SAVEGAME'
+    __slots__ = ('language', 'ssDepth', 'pcNick', '_unknown')
+    _masters_unknown_byte = 0x1B
+    unpackers = OrderedDict([
+        ('header_size', (00, unpack_int)),
+        ('_unknown',    (00, unpack_int_delim)),
+        ('language',    (00, lambda ins: unpack_(ins, '64sc'))),
+        ('ssWidth',     (00, unpack_int_delim)),
+        ('ssHeight',    (00, unpack_int_delim)),
+        ('ssDepth',     (00, unpack_int_delim)),
+        ('pcName',      (00, unpack_str16_delim)),
+        ('pcNick',      (00, unpack_str16_delim)),
+        ('pcLevel',     (00, unpack_int_delim)),
+        ('pcLocation',  (00, unpack_str16_delim)),
+        ('playTime',    (00, unpack_str16_delim)),
+    ])
+
+    def load_masters(self, ins):
+        self._mastersStart = ins.tell()
+        self._master_list_size(ins)
+        self.masters = []
+        numMasters, delim = struct.unpack('Bc', ins.read(2))
+        for count in xrange(numMasters):
+            self.masters.append(unpack_str16_delim(ins))
+
+    def _master_list_size(self, ins):
+        unknown, masterListSize = struct.unpack('=BI', ins.read(5))
+        if unknown != self._masters_unknown_byte: raise SaveHeaderError(
+            u'Unknown byte at position %d is %r not 0x%X' % (
+                ins.tell(), unknown, self._masters_unknown_byte))
+        return masterListSize
+
+    def _write_masters(self, ins, out, pack):
+        #--Skip old masters
+        self._master_list_size(ins)
+        numMasters = unpack_(ins, 'Bc') # get me the Byte
+        oldMasters = []
+        for count in xrange(numMasters):
+            oldMasters.append(unpack_str16_delim(ins))
+        #--Write new masters
+        newMasterListSize = 2 + (4 * len(self.masters))
+        for master in self.masters:
+            newMasterListSize += len(master)
+        pack('=BI', self._masters_unknown_byte, newMasterListSize)
+        pack('Bc', len(self.masters), '|')
+        for master in self.masters:
+            pack('Hc', len(master), '|')
+            out.write(master.s)
+            pack('c', '|')
+        #--Offsets
+        offset = out.tell() - ins.tell()
+        #--File Location Table
+        for i in xrange(6):
+            # formIdArrayCount offset and 5 others
+            oldOffset = unpack_int(ins)
+            pack('I', oldOffset + offset)
+        return oldMasters
+
+class Fallout3SaveHeader(FalloutNVSaveHeader):
+    save_magic = 'FO3SAVEGAME'
+    __slots__ = ()
+    _masters_unknown_byte = 0x15
+    unpackers = copy.copy(FalloutNVSaveHeader.unpackers)
+    del unpackers['language']
+
 # Factory
 def get_save_header_type(game_fsName):
     """:rtype: type"""
@@ -281,3 +353,7 @@ def get_save_header_type(game_fsName):
         return SkyrimSaveHeader
     elif game_fsName == u'Fallout4':
         return Fallout4SaveHeader
+    elif game_fsName == u'FalloutNV':
+        return FalloutNVSaveHeader
+    elif game_fsName == u'Fallout3':
+        return Fallout3SaveHeader

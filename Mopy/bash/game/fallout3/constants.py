@@ -976,7 +976,6 @@ inventoryTypes = ('CREA','NPC_','CONT',)
 FID = 'FID' #--Used by MelStruct classes to indicate fid elements.
 
 # Record type to name dictionary
-
 record_type_name = {
     'ALCH':_(u'Potions'),
     'AMMO':_(u'Ammo'),
@@ -989,3 +988,6 @@ record_type_name = {
     'MISC':_(u'Misc'),
     'WEAP':_(u'Weapons'),
 }
+
+# xEdit menu string and key for expert setting
+xEdit_expert = (_(u'Fo3Edit Expert'), 'fo3View.iKnowWhatImDoing')
