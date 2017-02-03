@@ -31,10 +31,19 @@ from ..bolt import formatDate
 
 class _LoMasterList(MasterList):
     mainMenu = itemMenu = None
+    _col_names = {
+        'File': _(u'File'),
+        'Current Order': _(u'Current LO'),
+        'Num': _(u'LO'),
+        }
     def _generate_master_infos(self):
         for mi, masters_name in enumerate(self.fileInfo.lord.loadOrder):
             masterInfo = bosh.MasterInfo(masters_name)
             self.data_store[mi] = masterInfo
+
+    @staticmethod
+    def _get_column_name(colKey):
+        return _LoMasterList._col_names.get(colKey, colKey)
 
 class LoDetails(_SashDetailsPanel):
     keyPrefix = 'bash.mods.loadOrders.details' # used in sash/scroll position, sorting
