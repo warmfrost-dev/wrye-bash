@@ -21,19 +21,53 @@
 #  https://github.com/wrye-bash
 #
 # =============================================================================
+import wx # YAK - sizers
 from collections import OrderedDict
 # Local
-from ..bolt import formatDate
-from . import _EditableMixin, BashTab, SashPanel
-from ..balt import UIList
+from . import BashTab, _SashDetailsPanel
 from .. import load_order
+from ..balt import UIList, vSizer, vspace, hSizer, StaticText, TextCtrl
+from ..bolt import formatDate
 
-class LoDetails(_EditableMixin, SashPanel):
+class LoDetails(_SashDetailsPanel):
     keyPrefix = 'bash.mods.loadOrders.details' # used in sash/scroll position, sorting
 
+    @property
+    def file_info(self):
+        return self.panel_uilist.data_store[self._displayed_lo_index] \
+            if self._displayed_lo_index is not None else None
+    @property
+    def displayed_item(self): return self._displayed_lo_index
+    @property
+    def file_infos(self): return self.panel_uilist.data_store
+    @property
+    def allowDetailsEdit(self): return False
+
     def __init__(self, parent):
-        SashPanel.__init__(self, parent, isVertical=False)
-        _EditableMixin.__init__(self, parent)
+        super(LoDetails, self).__init__(parent)
+        self._displayed_lo_index = None
+        #--Layout
+        detailsSizer = vSizer(vspace(),
+            (hSizer(
+                (StaticText(self.top,_(u"Load order save date:")))),0,wx.EXPAND),
+            (hSizer((self.file,1,wx.EXPAND)),0,wx.EXPAND),
+            )
+        detailsSizer.SetSizeHints(self.top)
+        self.top.SetSizer(detailsSizer)
+        #--Lo Info
+        textWidth = 200
+        self.gInfo = TextCtrl(self._bottom_low_panel, size=(textWidth, 64),
+                              multiline=True, # onText=self.OnInfoEdit,
+                              maxChars=2048)
+        tagsSizer = vSizer(vspace(),
+            (StaticText(self._bottom_low_panel, _(u"Bash Tags:"))),
+            (hSizer((self.gInfo, 1, wx.EXPAND)), 1, wx.EXPAND))
+        tagsSizer.SetSizeHints(self.masterPanel)
+        self._bottom_low_panel.SetSizer(tagsSizer)
+        self.bottom.SetSizer(vSizer((self.subSplitter,1,wx.EXPAND)))
+
+    def _resetDetails(self):
+        self._displayed_lo_index = None
 
 class LoList(UIList):
     labels = OrderedDict([
