@@ -24,13 +24,21 @@
 import wx # YAK - sizers
 from collections import OrderedDict
 # Local
-from . import BashTab, _SashDetailsPanel
-from .. import load_order
+from . import BashTab, _SashDetailsPanel, MasterList
+from .. import load_order, bosh
 from ..balt import UIList, vSizer, vspace, hSizer, StaticText, TextCtrl
 from ..bolt import formatDate
 
+class _LoMasterList(MasterList):
+    mainMenu = itemMenu = None
+    def _generate_master_infos(self):
+        for mi, masters_name in enumerate(self.fileInfo.lord.loadOrder):
+            masterInfo = bosh.MasterInfo(masters_name)
+            self.data_store[mi] = masterInfo
+
 class LoDetails(_SashDetailsPanel):
     keyPrefix = 'bash.mods.loadOrders.details' # used in sash/scroll position, sorting
+    _master_list_type = _LoMasterList
 
     @property
     def file_info(self):
@@ -68,6 +76,18 @@ class LoDetails(_SashDetailsPanel):
 
     def _resetDetails(self):
         self._displayed_lo_index = None
+        self.fileStr = u''
+
+    def SetFile(self,fileName='SAME'):
+        fileName = super(LoDetails, self).SetFile(fileName)
+        if fileName:
+            self._displayed_lo_index = fileName
+            #--Remember values for edit checks
+            self.fileStr = formatDate(self.file_info.date)
+        else: self.fileStr = u''
+        #--Set fields
+        self.file.SetValue(self.fileStr)
+        self.uilist.SetFileInfo(self.file_info)
 
 class LoList(UIList):
     labels = OrderedDict([
