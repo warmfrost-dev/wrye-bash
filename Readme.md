@@ -13,6 +13,9 @@ Wrye Bash is a mod management utility for Oblivion and Skyrim with a rich set
 
 ####Supported Games
 
+Here is a list of supported games with the minimal patch version that Bash was
+tested on (previous versions or latest versions may or may not work):
+
 * Oblivion (patch 1.2.0416)
 * Skyrim (patch 1.9.32.0.8)
 * Fallout 4 (patch 1.8.7.0)
