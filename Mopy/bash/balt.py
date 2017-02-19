@@ -132,14 +132,19 @@ class Image:
 
     typesDict = {'png': wx.BITMAP_TYPE_PNG,
                  'jpg': wx.BITMAP_TYPE_JPEG,
+                 'jpeg': wx.BITMAP_TYPE_JPEG,
                  'ico': wx.BITMAP_TYPE_ICO,
                  'bmp': wx.BITMAP_TYPE_BMP,
                  'tif': wx.BITMAP_TYPE_TIF,
                 }
 
-    def __init__(self, filename, imageType=wx.BITMAP_TYPE_ANY, iconSize=16):
+    def __init__(self, filename, imageType=None, iconSize=16):
         self.file = GPath(filename)
-        self.type = imageType
+        try:
+            self.type = imageType or self.typesDict[self.file.cext[1:]]
+        except KeyError:
+            print self.file.cext
+            self.type = wx.BITMAP_TYPE_ANY
         self.bitmap = None
         self.icon = None
         self.iconSize = iconSize
@@ -229,13 +234,15 @@ class ImageList:
                 indices[key] = imageList.Add(image.GetBitmap())
         return self.imageList
 
+    def get_image(self, key): return self.images[self[key]][1] # YAK !
+
     def __getitem__(self,key):
         self.GetImageList()
         return self.indices[key]
 
 # Images ----------------------------------------------------------------------
 class ColorChecks(ImageList):
-    """ColorChecks ImageList. Used by several List classes."""
+    """ColorChecks ImageList. Used by several UIList classes."""
     def __init__(self):
         ImageList.__init__(self, 16, 16)
         for state in (u'on', u'off', u'inc', u'imp'):
