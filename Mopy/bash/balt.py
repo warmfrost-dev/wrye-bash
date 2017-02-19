@@ -32,7 +32,6 @@ import bolt
 from env import AccessDeniedError ##:same as above, env and balt should not mix
 from bolt import GPath, deprint, BoltError, AbstractError, ArgumentError, \
     StateError, CancelError, SkipError
-from bass import Resources
 #--Python
 import cPickle
 import textwrap
@@ -45,6 +44,13 @@ import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.embeddedimage import PyEmbeddedImage
 import wx.lib.newevent
+
+class Resources:
+    #--Icon Bundles
+    bashRed = None
+    bashBlue = None
+    bashDocBrowser = None
+    bashMonkey = None
 
 # Constants -------------------------------------------------------------------
 defId = wx.ID_ANY
@@ -2385,13 +2391,14 @@ class Link(object):
 
     def _showLog(self, logText, title=u'', asDialog=False, fixedFont=False,
                  icons=None, size=True):
-        showLog(self.window, logText, title, asDialog, fixedFont, icons,
-                size)
+        if icons is None: icons = Resources.bashBlue
+        showLog(self.window, logText, title, asDialog, fixedFont, icons, size)
 
     def _showInfo(self, message, title=_(u'Information'), **kwdargs):
         return showInfo(self.window, message, title, **kwdargs)
 
     def _showWryeLog(self, logText, title=u'', asDialog=True, icons=None):
+        if icons is None: icons = Resources.bashBlue
         return showWryeLog(self.window, logText, title, asDialog, icons)
 
     def _askNumber(self, message, prompt=u'', title=u'', value=0, min=0,

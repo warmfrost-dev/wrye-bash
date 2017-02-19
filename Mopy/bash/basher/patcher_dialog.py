@@ -32,10 +32,9 @@ import wx
 from datetime import timedelta
 from . import BashFrame ##: drop this - decouple !
 from .. import bass, bosh, bolt, balt, env, load_order
-from ..bass import Resources
 from ..balt import StaticText, vSizer, hSizer, hspacer, Link, OkButton, \
     SelectAllButton, CancelButton, SaveAsButton, OpenButton, \
-    RevertToSavedButton, RevertButton, hspace, vspace
+    RevertToSavedButton, RevertButton, hspace, vspace, Resources
 from ..bolt import SubProgress, GPath, CancelError, BoltError, SkipError, Path
 from ..patcher import configIsCBash, exportConfig
 from ..patcher.patch_files import PatchFile, CBash_PatchFile

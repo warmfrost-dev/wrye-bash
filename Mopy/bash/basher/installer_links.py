@@ -38,7 +38,6 @@ import webbrowser
 from . import settingDefaults, Installers_Link, BashFrame, INIList
 from .frames import InstallerProject_OmodConfigDialog
 from .. import bass, bolt, bosh, bush, balt, archives
-from ..bass import Resources
 from ..balt import EnabledLink, CheckLink, AppendableLink, OneItemLink, \
     UIList_Rename, UIList_Hide
 from ..belt import InstallerWizard, generateTweakLines
@@ -551,7 +550,7 @@ class Installer_ListStructure(OneItemLink, _InstallerLink): # Provided by Warudd
         #--Get masters list
         balt.copyToClipboard(source_list_txt)
         self._showLog(source_list_txt, title=_(u'Package Structure'),
-                      fixedFont=False, icons=Resources.bashBlue)
+                      fixedFont=False)
 
 class Installer_Move(_InstallerLink):
     """Moves selected installers to desired spot."""
@@ -868,8 +867,7 @@ class Installer_Espm_List(_Installer_Details_Link):
                     espm_list.GetString(index) + '\n'
         subs += u'[/spoiler]'
         balt.copyToClipboard(subs)
-        self._showLog(subs, title=_(u'Esp/m List'), fixedFont=False,
-                      icons=Resources.bashBlue)
+        self._showLog(subs, title=_(u'Esp/m List'), fixedFont=False)
 
 #------------------------------------------------------------------------------
 # InstallerDetails Subpackage Links -------------------------------------------
@@ -921,8 +919,7 @@ class Installer_Subs_ListSubPackages(_Installer_Subs):
                 index)] + self.window.gSubList.GetString(index) + u'\n'
         subs += u'[/spoiler]'
         balt.copyToClipboard(subs)
-        self._showLog(subs, title=_(u'Sub-Package Lists'), fixedFont=False,
-                      icons=Resources.bashBlue)
+        self._showLog(subs, title=_(u'Sub-Package Lists'), fixedFont=False)
 
 #------------------------------------------------------------------------------
 # InstallerArchive Links ------------------------------------------------------
