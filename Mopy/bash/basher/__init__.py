@@ -3560,7 +3560,10 @@ class BashStatusBar(DnDStatusBar):
             # Not present ?
             if not link.IsPresent(): continue
             # Add it
-            self._addButton(link)
+            try:
+                self._addButton(link)
+            except AttributeError:
+                deprint(u'Failed to load button %r' % (uid,), traceback=True)
         # Add any new buttons
         for link in BashStatusBar.buttons:
             # Already tested?
@@ -3572,7 +3575,10 @@ class BashStatusBar(DnDStatusBar):
                 hideChanged = True
             order.append(uid)
             orderChanged = True
-            self._addButton(link)
+            try:
+                self._addButton(link)
+            except AttributeError:
+                deprint(u'Failed to load button %r' % (uid,), traceback=True)
         # Update settings
         if orderChanged: settings.setChanged('bash.statusbar.order')
         if hideChanged: settings.setChanged('bash.statusbar.hide')
