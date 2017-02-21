@@ -823,7 +823,7 @@ def _showLogClose(evt=None):
     window.Destroy()
 
 def showLog(parent, logText, title=u'', asDialog=True, fixedFont=False,
-            icons=None, size=True):
+            log_icons=None, size=True):
     """Display text in a log window"""
     #--Sizing
     pos = _settings.get('balt.LogMessage.pos',defPos)
@@ -835,7 +835,7 @@ def showLog(parent, logText, title=u'', asDialog=True, fixedFont=False,
     else:
         window = wx.Frame(parent,defId,title,pos=pos,size=size,
             style= (wx.RESIZE_BORDER | wx.CAPTION | wx.SYSTEM_MENU | wx.CLOSE_BOX | wx.CLIP_CHILDREN))
-        if icons: window.SetIcons(icons)
+        if log_icons: window.SetIcons(log_icons)
     window.SetSizeHints(200,200)
     window.Bind(wx.EVT_CLOSE,_showLogClose)
     window.SetBackgroundColour(wx.NullColour) #--Bug workaround to ensure that default colour is being used.
@@ -862,7 +862,7 @@ def showLog(parent, logText, title=u'', asDialog=True, fixedFont=False,
     else: window.Show()
 
 #------------------------------------------------------------------------------
-def showWryeLog(parent, logText, title=u'', asDialog=True, icons=None):
+def showWryeLog(parent, logText, title=u'', asDialog=True, log_icons=None):
     """Convert logText from wtxt to html and display. Optionally, logText can be path to an html file."""
     try:
         import wx.lib.iewin
@@ -889,7 +889,7 @@ def showWryeLog(parent, logText, title=u'', asDialog=True, icons=None):
     else:
         window = wx.Frame(parent,defId,title,pos=pos,size=size,
             style= (wx.RESIZE_BORDER | wx.CAPTION | wx.SYSTEM_MENU | wx.CLOSE_BOX | wx.CLIP_CHILDREN))
-        if icons: window.SetIcons(icons)
+        if log_icons: window.SetIcons(log_icons)
     window.SetSizeHints(200,200)
     window.Bind(wx.EVT_CLOSE,_showLogClose)
     #--Text
