@@ -1211,6 +1211,7 @@ class _SashDetailsPanel(_EditableMixinOnFileInfos, SashPanel):
     :type uilist: MasterList"""
     defaultSubSashPos = 0 # that was the default for mods (for saves 500)
     _master_list_type = MasterList
+    _masters_text = _(u"Masters:")
 
     def __init__(self, parent):
         SashPanel.__init__(self, parent, isVertical=False)
@@ -1232,7 +1233,7 @@ class _SashDetailsPanel(_EditableMixinOnFileInfos, SashPanel):
                                              panel=mod_or_save_panel,
                                              detailsPanel=self)
         mastersSizer = vSizer(
-            vspace(), hSizer(StaticText(self.masterPanel,_(u"Masters:"))),
+            vspace(), hSizer(StaticText(self.masterPanel, self._masters_text)),
             (hSizer((self.uilist,1,wx.EXPAND)),1,wx.EXPAND),
             vspace(), hSizer(self.save, hspace(), self.cancel))
         self.masterPanel.SetSizer(mastersSizer)

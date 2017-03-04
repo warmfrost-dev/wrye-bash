@@ -48,6 +48,7 @@ class _LoMasterList(MasterList):
 class LoDetails(_SashDetailsPanel):
     keyPrefix = 'bash.mods.loadOrders.details' # used in sash/scroll position, sorting
     _master_list_type = _LoMasterList
+    _masters_text = _(u"Saved Load Order:")
 
     @property
     def file_info(self):
@@ -116,5 +117,5 @@ class LoPanel(BashTab):
 
     def __init__(self, parent):
         self.listData = {x: y for x, y in
-                         enumerate(load_order._saved_load_orders)}
+                         enumerate(load_order.get_saved_load_orders())}
         super(LoPanel, self).__init__(parent)
