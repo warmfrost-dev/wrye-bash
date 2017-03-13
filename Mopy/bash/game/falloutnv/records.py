@@ -26,8 +26,7 @@
 import re
 import struct
 import itertools
-from ...bolt import StateError, Flags, BoltError, sio, DataDict, winNewLines, \
-    encode, GPath
+from ...bolt import StateError, Flags, BoltError, sio, DataDict, encode, GPath
 from ...brec import MelRecord, ModError, MelStructs, \
     ModSizeError, MelObject, MelGroups, MelStruct, FID, MelGroup,MelString, \
     MreLeveledListBase, MelSet, MelFid, MelNull, MelOptStruct, MelFids, \
@@ -157,7 +156,7 @@ class MelConditions(MelStructs):
         (target.operFlag,target.unused1,target.compValue,ifunc,target.unused2) = unpacked1
         #--Get parameters
         if ifunc not in allConditions:
-            raise bolt.BoltError(u'Unknown condition function: %d\nparam1: %08X\nparam2: %08X' % (ifunc,ins.unpackRef(), ins.unpackRef()))
+            raise BoltError(u'Unknown condition function: %d\nparam1: %08X\nparam2: %08X' % (ifunc,ins.unpackRef(), ins.unpackRef()))
         # Form1 is Param1
         form1 = 'I' if ifunc in fid1Conditions else 'i'
         # Form2 is Param2
@@ -291,7 +290,7 @@ class MreHasEffects:
         """Return a text description of magic effects."""
         mgef_school = mgef_school or bush.mgef_school
         mgef_name = mgef_name or bush.mgef_name
-        with bolt.sio() as buff:
+        with sio() as buff:
             avEffects = bush.genericAVEffects
             aValues = bush.actorValues
             buffWrite = buff.write
@@ -458,7 +457,7 @@ class MelMODS(MelBase):
         data = []
         dataAppend = data.append
         for x in xrange(count):
-            string = ins.readString32(size,readId)
+            string = ins.readString32(readId)
             fid = ins.unpackRef(readId)
             index, = ins.unpack('I',4,readId)
             dataAppend((string,fid,index))

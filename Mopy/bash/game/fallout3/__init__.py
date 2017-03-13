@@ -22,9 +22,8 @@
 #
 # =============================================================================
 
-"""This modules defines static data for use by bush, when TES V:
-   Skyrim is set at the active game."""
-import re
+"""This modules defines static data for use by bush, when
+   Fallout 3 is set at the active game."""
 import struct
 from .constants import *
 from .default_tweaks import default_tweaks
@@ -182,11 +181,6 @@ saveProfilesKey = (u'General',u'SLocalSavePath')
 masterFiles = [
     u'Fallout3.esm',
     ]
-
-#--Plugin files that can't be deactivated
-nonDeactivatableFiles = []
-
-namesPatcherMaster = re.compile(ur"^Fallout3.esm$",re.I|re.U)
 
 #The pickle file for this game. Holds encoded GMST IDs from the big list below.
 pklfile = ur'bash\db\Fallout3_ids.pkl'

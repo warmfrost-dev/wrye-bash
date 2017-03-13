@@ -468,7 +468,7 @@ class MelMODS(MelBase):
         data = []
         dataAppend = data.append
         for x in xrange(count):
-            string = ins.readString32(size,readId)
+            string = ins.readString32(readId)
             fid = ins.unpackRef(readId)
             index, = ins.unpack('I',4,readId)
             dataAppend((string,fid,index))
