@@ -2681,6 +2681,9 @@ class SaveInfos(FileInfos):
         CoSaves.move(self[fileName].abs_path, destDir, fileName)
 
     #--Local Saves ------------------------------------------------------------
+            localSaveDirs = [x for x in baseSaves.list() if (x.cs.lower() not in (
+                u'bash', u'mods', u'data', u'trash', u'bash installers', u'bash mod data')
+                                                             and baseSaves.join(x).isdir())]
     def _refreshLocalSave(self):
         """Refreshes self.localSave and self.dir."""
         #--self.localSave is NOT a Path object.
@@ -2917,6 +2920,7 @@ class InstallerProject(InstallerProject): pass
 
 # Initialization --------------------------------------------------------------
 
+
 def initDefaultTools():
     #-- Other tool directories
     #   First to default path
@@ -3047,6 +3051,7 @@ def initDefaultSettings():
     inisettings['PromptActivateBashedPatch'] = True
     inisettings['WarnTooManyFiles'] = True
     inisettings['SkippedBashInstallersDirs'] = u''
+    inisettings['EnableAdvancedProfiles'] = False
 
 def initOptions(bashIni):
     initDefaultTools()

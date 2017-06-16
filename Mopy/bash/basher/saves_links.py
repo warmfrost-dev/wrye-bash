@@ -33,9 +33,13 @@ from .dialogs import ImportFaceDialog
 from .. import bass, bosh, bolt, balt, bush, parsers, load_order, initialization
 from ..balt import EnabledLink, AppendableLink, Link, CheckLink, ChoiceLink, \
     ItemLink, SeparatorLink, OneItemLink, Image, UIList_Rename
-from ..bolt import GPath, SubProgress, formatInteger, struct_pack, struct_unpack
+from ..bolt import GPath, SubProgress, formatInteger, struct_pack, struct_unpack, deprint
 from ..bosh import faces
+from  settings_links import Settings_SaveSettings
 from ..exception import ArgumentError, BoltError, CancelError, ModError
+import os
+import subprocess
+import datetime
 
 __all__ = ['Saves_Profiles', 'Save_Rename', 'Save_Renumber', 'Save_Move',
            'Save_LoadMasters', 'Save_DiffMasters', 'Save_Stats',
@@ -99,6 +103,9 @@ class Saves_ProfilesData(balt.ListEditorData):
         self.baseSaves.join(newName).makedirs()
         newSaves = u'Saves\\'+newName+u'\\'
         bosh.saveInfos.profiles.setItem(newSaves,'vOblivion',bosh.modInfos.voCurrent)
+        if bass.inisettings['EnableAdvancedProfiles']:
+            new_profile = Save_AdvancedProfile(self.baseSaves.join(newName))
+            new_profile.create()
         return newName
 
     def rename(self,oldName,newName):
@@ -142,9 +149,119 @@ class Saves_ProfilesData(balt.ListEditorData):
         #--Remove directory
         if GPath(bush.game.fsName).join(u'Saves').s not in profileDir.s:
             raise BoltError(u'Sanity check failed: No "%s\\Saves" in %s.' % (bush.game.fsName,profileDir.s))
-        shutil.rmtree(profileDir.s) #--DO NOT SCREW THIS UP!!!
+        if bass.inisettings['EnableAdvancedProfiles']:
+            # Deleting a hard linked profile may take a LONG time, but moving it to a Trash folder is FAST!
+            if profileDir.exists():
+                suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")  # Trash contents must be uniquely named
+                profileDir.moveTo('%s/Trash (deleted profiles)/%s (%s)' % (bass.dirs['saveBase'], profileDir.stail, suffix))
+        else:  # preserve classic profile behavior by deleting the folder
+            shutil.rmtree(profileDir.s)  # --DO NOT SCREW THIS UP!!!
         bosh.saveInfos.profiles.delRow(profileSaves)
         return True
+
+class Save_AdvancedProfile:
+        """Handle creating, activating and deactivating an Advanced Profile."""
+
+        def __init__(self, profile):  # type: bolt.Path
+            self._profile_Data = profile.join(u'Data')
+            self._profile_mods = profile.join(u'Mods')
+            self._game_Data = bass.dirs['mods']  # abs path to '{game}/Data' folder
+            self._game_mods = bass.dirs['modsRoot']  # abs path to '{game} Mods' folder
+            self._ln = bass.dirs['compiled'].join(u'ln.exe')
+            # NB: Any profile named "Default" or "Saves" will display as "Default" when creating the profile.
+            self._profile_name = "Default" if profile.stail == "Saves" else profile.stail
+
+        def create(self):
+            """ Create hard linked copies of {game}/Data and '{game} Mod' folders in the user's profile folder. """
+            if self.is_deployable:  # this Advanced profile already exists, no need to create it
+                return
+            self._softdelete_saves()  # ensure folder is clean and ready to receive copy of game folders
+            with balt.BusyCursor():
+                try:
+                    CREATE_NO_WINDOW = 0x08000000  # flag to hide the console window
+                    with balt.Progress(_(u"Creating Advanced Profile") + u' ' * 70) as progress:
+                        progress(0.4, _(u"Initializing the profile's Mods directory.\n"
+                                        u'This may take a few minutes and may appear frozen.'))
+                        subprocess.check_output(
+                            u'%s --output lnMods.log --recursive "%s"  "%s"' % (
+                            self._ln, self._game_mods, self._profile_mods), creationflags=CREATE_NO_WINDOW)
+                        progress(0.8, _(u"Initializing the profile's Data directory.\n"
+                                        u'This may take a few minutes and may appear frozen.'))
+                        subprocess.check_output(
+                            u'%s --output lnData.log --recursive "%s"  "%s"' % (
+                            self._ln, self._game_Data, self._profile_Data), creationflags=CREATE_NO_WINDOW)
+                except subprocess.CalledProcessError as err:
+                    balt.showError(None,u'Failed to create "%s" profile.\n\n(%s)%s\ncmdline:%s\n%s' % (
+                         self._profile_name, err.returncode, self._returncode_as_string(err.returncode),
+                         err.cmd, err.output))
+
+        def activate(self):
+            """ Start using this profile by *moving* its Saves folders to the {game}/Data and '{game} Mods' folders """
+            deprint(u'Activating %s profile' % self._profile_name)
+            try:  # using os.rename rather than shutil.move because shutil.move hangs if a subfolder is open
+                os.rename(self._profile_Data.s, self._game_Data.s)
+                os.rename(self._profile_mods.s, self._game_mods.s)
+            except Exception as e:
+                if not self._profile_Data.exists(): os.rename(self._game_Data.s, self._profile_Data.s)
+                if not self._profile_mods.exists(): os.rename(self._game_mods.s, self._profile_mods.s)
+                message = _(u'Failed to activate "%s" profile.\n%s\n\n'
+                            u'Please close any open "%s" folders or files, '
+                            u'and try again.' % (self._profile_name, e, self._profile_name))
+                balt.showError(None, message, u'Advanced Profiles')
+
+        def deactivate(self):
+            """ Stop using this profile by *moving* its {game}/Data and '{game} Mods' folders to the Saves folder. """
+            deprint(u'Deactivating %s profile' % self._profile_name)
+            try:  # using os.rename rather than shutil.move because shutil.move hangs if a subfolder is open
+                self._softdelete_saves()   # ensure folder is clean and ready to receive copy of game folders
+                os.rename(self._game_Data.s, self._profile_Data.s)
+                os.rename(self._game_mods.s, self._profile_mods.s)
+            except Exception as e:
+                if not self._game_Data.exists(): os.rename(self._profile_Data.s, self._game_Data.s)
+                if not self._game_mods.exists(): os.rename(self._profile_mods.s, self._game_mods.s)
+                message = _(u'Failed to deactivate "%s" profile.\n%s\n\n'
+                            u'Please close any open "%s" or "%s" Game folders or files, '
+                            u'and try again.' % (self._profile_name, e, bass.dirs['app'].stail, self._game_mods.stail))
+                balt.showError(None, message, u'Advanced Profiles')
+
+        def _softdelete_saves(self):
+            """Insure the save folder is clean, i.e. no Data or Mods folders exist.
+               Moving rather than deleting is fast and less error prone. Deleting may cause permission errors, etc."""
+            suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")  # renames must be unique, 'fname_120508_171442'
+            for folder in (self._profile_Data, self._profile_mods):
+                if folder.exists():
+                    folder.moveTo('%s/Trash/%s (%s)' % (folder.shead, folder.stail, suffix))
+
+        @staticmethod
+        def _returncode_as_string(err):  # type: (int) -> str
+            """Return user friendly message for LN.EXE error
+                Error codes are listed at: http://schinagl.priv.at/nt/ln/ln.html"""
+            msg = u'For some unknown reason the creation of a hardlink failed.'
+            if err == -1: msg = u'The game mod directory is not found so cannot clone it.'
+            elif err == -2: msg = (u'The first command line argument in recursive mode specifies a directory, '
+                                   u'and it is not a directory, but some other kind of file.')
+            elif err == -3: msg = (u'The second command line argument specifies a file, or in recursive mode '
+                                   u'a directory, which already exists. ')
+            elif err == -4: msg = u'The destination directory could not be created in recursive mode.'
+            elif err == -6: msg = u'The filesystem is not NTFS and does not support the creation of hardlinks.'
+            elif err == -8: msg = u'Less arguments were given via command line.'
+            return msg
+
+        @property
+        def is_deployable(self):
+            return self._profile_Data.exists() and self._profile_mods.exists()
+
+        @property
+        def _game_folders_exists(self):
+            """ Are {game}/Data and '{game} Mods' folders populated? """
+            number_of_files = 0
+            if self._game_Data.isdir():
+                number_of_files = len([name for name in os.listdir(self._game_Data.cs)])
+            return number_of_files > 0 and self._game_mods.exists()
+
+        @property
+        def is_active(self):
+            return not self.is_deployable and self._game_folders_exists
 
 #------------------------------------------------------------------------------
 class Saves_Profiles(ChoiceLink):
@@ -163,9 +280,56 @@ class Saves_Profiles(ChoiceLink):
         def relativePath(self): return u'Saves\\' + self._text + u'\\'
         def _check(self): return Saves_Profiles.local == self.relativePath
         def _enable(self): return not self._check()
-        def Execute(self):
-            arcSaves = bosh.saveInfos.localSave
-            newSaves = self.relativePath
+
+        def _swap_BashLoadOrder(self, currentPath, switchtoPath):
+            # type: (bolt.Path, bolt.Path) -> None
+            """ Swap load order archive files to keep load order and profile in sync. """
+            for loadorder_file in ('BashLoadOrders.dat', 'BashLoadOrders.dat.bak'):
+                if bass.dirs['saveBase'].join(loadorder_file).exists():
+                    bass.dirs['saveBase'].join(loadorder_file).moveTo(currentPath.join(loadorder_file))
+                if switchtoPath.join(loadorder_file).exists():
+                    switchtoPath.join(loadorder_file).moveTo(bass.dirs['saveBase'].join(loadorder_file))
+
+        def _swap_staged_profiles(self, arcSaves, newSaves):
+            # type: (bolt.Path, bolt.Path) -> None | 'restarts Bash'
+            """ Swap {saves}/{profile} and {game}/Data folders by *moving* them. """
+            currentPath, switchtoPath = (bass.dirs['saveBase'].join(saves) for saves in (arcSaves, newSaves))
+            if currentPath.drive() != switchtoPath.drive() or os.name != 'nt':  # ln.exe only works on windows
+                balt.showInfo(None, u'Advanced profiles only work on Windows systems where the Game '
+                                    u'and Saves directories are on the same drive.\n'
+                                    u'Please disable the bEnableAdvancedProfiles setting in the Bash.ini file '
+                                    u'to revert to classic profiles',
+                              title=u'Advanced Profile')
+                return
+
+            with balt.BusyCursor():
+                deprint(u'Changing from Advanced profile %s to %s' % (arcSaves, newSaves))
+                # Flush any changes to Installers.dat before swapping. This saving also breaks any hard links!
+                (Settings_SaveSettings()).Execute()
+                current_profile = Save_AdvancedProfile(currentPath)
+                switchto_profile = Save_AdvancedProfile(switchtoPath)
+                switchto_profile.create()
+                if not switchto_profile.is_deployable:
+                    return    # encountered an error
+                current_profile.deactivate()
+                if not current_profile.is_active:   # profile successfully deactivated, let's continue
+                    switchto_profile.activate()
+                    if not switchto_profile.is_active:  # failed to activate the profile
+                        current_profile.activate()  # error recovery - rollback changes - make former active again
+                        if not current_profile.is_active:  # failed to re-activate ??  -- this should never happen
+                            message = _(u'Something went wrong!\nThe Game/Data folder may be missing or empty. '
+                                        u'If so, copy a Data folder from the Saves folder to Game/Data folder. ')
+                            balt.showError(None, message)
+                        return
+                    bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
+                    bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
+                    self._swap_BashLoadOrder(currentPath, switchtoPath)
+
+                    # Restarting Bash is the simplest way to guarantee all caches and buffers reflect the
+                    # data in the just swapped in Data and Mod Installers folders.
+                    Link.Frame.Restart()
+
+        def _swap_classic_profiles(self, arcSaves, newSaves):
             with balt.BusyCursor():
                 bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
                 bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
@@ -175,6 +339,15 @@ class Saves_Profiles(ChoiceLink):
                 self.window.RefreshUI(detail_item=None)
                 self.window.panel.ShowPanel()
                 Link.Frame.warn_corrupted(warn_mods=False, warn_strings=False)
+
+        def Execute(self):
+            # NB: Tried using abstract classes to separate but that required more code changes than this simple IF.
+            arcSaves = bosh.saveInfos.localSave
+            newSaves = self.relativePath
+            if bass.inisettings['EnableAdvancedProfiles']:
+                self._swap_staged_profiles(arcSaves, newSaves)
+            else:
+                self._swap_classic_profiles(arcSaves, newSaves)
 
     choiceLinkType = _ProfileLink
 
@@ -195,7 +368,8 @@ class Saves_Profiles(ChoiceLink):
         def Execute(self):
             """Show save profiles editing dialog."""
             data = Saves_ProfilesData(self.window)
-            balt.ListEditor.Display(self.window, _(u'Save Profiles'), data)
+            profile_type = u'Advanced Profiles' if bass.inisettings['EnableAdvancedProfiles'] else u'Save Profiles'
+            balt.ListEditor.Display(self.window, profile_type, data)
 
     extraItems = [_Edit(), SeparatorLink(), _Default()]
 
