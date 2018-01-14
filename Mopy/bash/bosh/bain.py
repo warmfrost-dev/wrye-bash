@@ -1918,7 +1918,7 @@ class InstallersData(DataStore):
         #--Remove empty dirs?
         if bass.settings['bash.installers.removeEmptyDirs']:
             for empty in emptyDirs:
-                try: empty.removedirs()
+                try: empty.rmdir() # only del empty dir, don't walk up path via os.removedirs()
                 except OSError: pass
         changed = Installer.final_update(new_sizeCrcDate,
                                          self.data_sizeCrcDate, pending,

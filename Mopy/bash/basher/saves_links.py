@@ -150,10 +150,7 @@ class Saves_ProfilesData(balt.ListEditorData):
         if GPath(bush.game.fsName).join(u'Saves').s not in profileDir.s:
             raise BoltError(u'Sanity check failed: No "%s\\Saves" in %s.' % (bush.game.fsName,profileDir.s))
         if bass.inisettings['EnableAdvancedProfiles']:
-            # Deleting a hard linked profile may take a LONG time, but moving it to a Trash folder is FAST!
-            if profileDir.exists():
-                suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")  # Trash contents must be uniquely named
-                profileDir.moveTo('%s/Trash (deleted profiles)/%s (%s)' % (bass.dirs['saveBase'], profileDir.stail, suffix))
+            Utilities().remove_folders(profileDir)
         else:  # preserve classic profile behavior by deleting the folder
             shutil.rmtree(profileDir.s)  # --DO NOT SCREW THIS UP!!!
         bosh.saveInfos.profiles.delRow(profileSaves)
@@ -162,7 +159,10 @@ class Saves_ProfilesData(balt.ListEditorData):
 class Save_AdvancedProfile:
         """Handle creating, activating and deactivating an Advanced Profile."""
 
+        CREATE_NO_WINDOW = 0x08000000  # flag to hide the console window
+
         def __init__(self, profile):  # type: bolt.Path
+            self._profile = profile
             self._profile_Data = profile.join(u'Data')
             self._profile_mods = profile.join(u'Mods')
             self._game_Data = bass.dirs['mods']  # abs path to '{game}/Data' folder
@@ -173,64 +173,43 @@ class Save_AdvancedProfile:
 
         def create(self):
             """ Create hard linked copies of {game}/Data and '{game} Mod' folders in the user's profile folder. """
-            if self.is_deployable:  # this Advanced profile already exists, no need to create it
+            if self.exists:  # this profile already exists, no need to create it
                 return
-            self._softdelete_saves()  # ensure folder is clean and ready to receive copy of game folders
             with balt.BusyCursor():
                 try:
-                    CREATE_NO_WINDOW = 0x08000000  # flag to hide the console window
+                    Utilities().remove_folders(self._profile_Data, self._profile_mods)  # ensure no collisions
                     with balt.Progress(_(u"Creating Advanced Profile") + u' ' * 70) as progress:
                         progress(0.4, _(u"Initializing the profile's Mods directory.\n"
                                         u'This may take a few minutes and may appear frozen.'))
                         subprocess.check_output(
                             u'%s --output lnMods.log --recursive "%s"  "%s"' % (
-                            self._ln, self._game_mods, self._profile_mods), creationflags=CREATE_NO_WINDOW)
+                            self._ln, self._game_mods, self._profile_mods), creationflags=self.CREATE_NO_WINDOW)
                         progress(0.8, _(u"Initializing the profile's Data directory.\n"
                                         u'This may take a few minutes and may appear frozen.'))
                         subprocess.check_output(
                             u'%s --output lnData.log --recursive "%s"  "%s"' % (
-                            self._ln, self._game_Data, self._profile_Data), creationflags=CREATE_NO_WINDOW)
+                            self._ln, self._game_Data, self._profile_Data), creationflags=self.CREATE_NO_WINDOW)
                 except subprocess.CalledProcessError as err:
                     balt.showError(None,u'Failed to create "%s" profile.\n\n(%s)%s\ncmdline:%s\n%s' % (
                          self._profile_name, err.returncode, self._returncode_as_string(err.returncode),
                          err.cmd, err.output))
+            # Copy loadorder.ini & (pluins.txt) to saves folder. Since no lo inis in Saves, current lo unchanged.
+            bosh.modInfos.swapPluginsAndMasterVersion(self._profile, bass.dirs['saveBase'])
+            if bass.dirs['saveBase'].join('BashLoadOrders.dat').exists():
+                bass.dirs['saveBase'].join('BashLoadOrders.dat').copyTo(self._profile.join('BashLoadOrders.dat'))
 
         def activate(self):
-            """ Start using this profile by *moving* its Saves folders to the {game}/Data and '{game} Mods' folders """
+            """ Start using this profile by creating junctions for the {game}/Data and '{game} Mods' folders """
             deprint(u'Activating %s profile' % self._profile_name)
-            try:  # using os.rename rather than shutil.move because shutil.move hangs if a subfolder is open
-                os.rename(self._profile_Data.s, self._game_Data.s)
-                os.rename(self._profile_mods.s, self._game_mods.s)
+            try:
+                Utilities().remove_folders(self._game_Data, self._game_mods) # deactive current profile
+                subprocess.check_output(u'%s --junction "%s" "%s"' % (
+                            self._ln, self._game_Data.s, self._profile_Data.s), creationflags=self.CREATE_NO_WINDOW)
+                subprocess.check_output(u'%s --junction "%s" "%s"' % (
+                            self._ln, self._game_mods.s, self._profile_mods.s), creationflags=self.CREATE_NO_WINDOW)
             except Exception as e:
-                if not self._profile_Data.exists(): os.rename(self._game_Data.s, self._profile_Data.s)
-                if not self._profile_mods.exists(): os.rename(self._game_mods.s, self._profile_mods.s)
-                message = _(u'Failed to activate "%s" profile.\n%s\n\n'
-                            u'Please close any open "%s" folders or files, '
-                            u'and try again.' % (self._profile_name, e, self._profile_name))
+                message = _(u'Failed to activate "%s" profile.\n%s' % (self._profile_name, e))
                 balt.showError(None, message, u'Advanced Profiles')
-
-        def deactivate(self):
-            """ Stop using this profile by *moving* its {game}/Data and '{game} Mods' folders to the Saves folder. """
-            deprint(u'Deactivating %s profile' % self._profile_name)
-            try:  # using os.rename rather than shutil.move because shutil.move hangs if a subfolder is open
-                self._softdelete_saves()   # ensure folder is clean and ready to receive copy of game folders
-                os.rename(self._game_Data.s, self._profile_Data.s)
-                os.rename(self._game_mods.s, self._profile_mods.s)
-            except Exception as e:
-                if not self._game_Data.exists(): os.rename(self._profile_Data.s, self._game_Data.s)
-                if not self._game_mods.exists(): os.rename(self._profile_mods.s, self._game_mods.s)
-                message = _(u'Failed to deactivate "%s" profile.\n%s\n\n'
-                            u'Please close any open "%s" or "%s" Game folders or files, '
-                            u'and try again.' % (self._profile_name, e, bass.dirs['app'].stail, self._game_mods.stail))
-                balt.showError(None, message, u'Advanced Profiles')
-
-        def _softdelete_saves(self):
-            """Insure the save folder is clean, i.e. no Data or Mods folders exist.
-               Moving rather than deleting is fast and less error prone. Deleting may cause permission errors, etc."""
-            suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")  # renames must be unique, 'fname_120508_171442'
-            for folder in (self._profile_Data, self._profile_mods):
-                if folder.exists():
-                    folder.moveTo('%s/Trash/%s (%s)' % (folder.shead, folder.stail, suffix))
 
         @staticmethod
         def _returncode_as_string(err):  # type: (int) -> str
@@ -248,20 +227,12 @@ class Save_AdvancedProfile:
             return msg
 
         @property
-        def is_deployable(self):
+        def exists(self):
             return self._profile_Data.exists() and self._profile_mods.exists()
-
-        @property
-        def _game_folders_exists(self):
-            """ Are {game}/Data and '{game} Mods' folders populated? """
-            number_of_files = 0
-            if self._game_Data.isdir():
-                number_of_files = len([name for name in os.listdir(self._game_Data.cs)])
-            return number_of_files > 0 and self._game_mods.exists()
-
+        
         @property
         def is_active(self):
-            return not self.is_deployable and self._game_folders_exists
+            return self._game_Data.exists() and self._game_mods.exists()
 
 #------------------------------------------------------------------------------
 class Saves_Profiles(ChoiceLink):
@@ -286,15 +257,15 @@ class Saves_Profiles(ChoiceLink):
             """ Swap load order archive files to keep load order and profile in sync. """
             for loadorder_file in ('BashLoadOrders.dat', 'BashLoadOrders.dat.bak'):
                 if bass.dirs['saveBase'].join(loadorder_file).exists():
-                    bass.dirs['saveBase'].join(loadorder_file).moveTo(currentPath.join(loadorder_file))
+                    bass.dirs['saveBase'].join(loadorder_file).copyTo(currentPath.join(loadorder_file))
                 if switchtoPath.join(loadorder_file).exists():
-                    switchtoPath.join(loadorder_file).moveTo(bass.dirs['saveBase'].join(loadorder_file))
+                    switchtoPath.join(loadorder_file).copyTo(bass.dirs['saveBase'].join(loadorder_file))
 
-        def _swap_staged_profiles(self, arcSaves, newSaves):
+        def _switch_profiles(self, arcSaves, newSaves):
             # type: (bolt.Path, bolt.Path) -> None | 'restarts Bash'
-            """ Swap {saves}/{profile} and {game}/Data folders by *moving* them. """
+            """ Activate a profile by creating Junctions to {saves}/{profile} and {game}/Data. """
             currentPath, switchtoPath = (bass.dirs['saveBase'].join(saves) for saves in (arcSaves, newSaves))
-            if currentPath.drive() != switchtoPath.drive() or os.name != 'nt':  # ln.exe only works on windows
+            if  bass.dirs['mods'].drive() != switchtoPath.drive() or os.name != 'nt':  # ln.exe only works on windows
                 balt.showInfo(None, u'Advanced profiles only work on Windows systems where the Game '
                                     u'and Saves directories are on the same drive.\n'
                                     u'Please disable the bEnableAdvancedProfiles setting in the Bash.ini file '
@@ -303,31 +274,26 @@ class Saves_Profiles(ChoiceLink):
                 return
 
             with balt.BusyCursor():
-                deprint(u'Changing from Advanced profile %s to %s' % (arcSaves, newSaves))
+                deprint(u'Switching to Advanced profile %s' % (newSaves))
                 # Flush any changes to Installers.dat before swapping. This saving also breaks any hard links!
                 (Settings_SaveSettings()).Execute()
-                current_profile = Save_AdvancedProfile(currentPath)
                 switchto_profile = Save_AdvancedProfile(switchtoPath)
-                switchto_profile.create()
-                if not switchto_profile.is_deployable:
+                switchto_profile.create()  # may need to create a profile used by SaveProfiles
+                if not switchto_profile.exists:
                     return    # encountered an error
-                current_profile.deactivate()
-                if not current_profile.is_active:   # profile successfully deactivated, let's continue
-                    switchto_profile.activate()
-                    if not switchto_profile.is_active:  # failed to activate the profile
-                        current_profile.activate()  # error recovery - rollback changes - make former active again
-                        if not current_profile.is_active:  # failed to re-activate ??  -- this should never happen
-                            message = _(u'Something went wrong!\nThe Game/Data folder may be missing or empty. '
-                                        u'If so, copy a Data folder from the Saves folder to Game/Data folder. ')
-                            balt.showError(None, message)
-                        return
-                    bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
-                    bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
-                    self._swap_BashLoadOrder(currentPath, switchtoPath)
+                switchto_profile.activate()
+                if not switchto_profile.is_active:  # failed to activate the profile
+                    message = _(u'Something went wrong!\nThe Game/Data folder may be missing or empty. '
+                                u'If so, create a Junction named Data in the Game folder pointing to %s. ' % currentPath.s)
+                    balt.showError(None, message)
+                    return
+                bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
+                bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
+                self._swap_BashLoadOrder(currentPath, switchtoPath)
 
-                    # Restarting Bash is the simplest way to guarantee all caches and buffers reflect the
-                    # data in the just swapped in Data and Mod Installers folders.
-                    Link.Frame.Restart()
+                # Restarting Bash is the simplest way to guarantee all caches and buffers reflect the
+                # data in the just swapped in Data and Mod Installers folders.
+                Link.Frame.Restart()
 
         def _swap_classic_profiles(self, arcSaves, newSaves):
             with balt.BusyCursor():
@@ -345,7 +311,7 @@ class Saves_Profiles(ChoiceLink):
             arcSaves = bosh.saveInfos.localSave
             newSaves = self.relativePath
             if bass.inisettings['EnableAdvancedProfiles']:
-                self._swap_staged_profiles(arcSaves, newSaves)
+                self._switch_profiles(arcSaves, newSaves)
             else:
                 self._swap_classic_profiles(arcSaves, newSaves)
 
@@ -1068,3 +1034,21 @@ class Save_UpdateNPCLevels(EnabledLink):
             message += u'\n\n'+_(u'Some mods had load errors and were skipped:')+u'\n* '
             message += u'\n* '.join(modErrors)
         self._showOk(message, _(u'Update NPC Levels'))
+
+class Utilities:
+    """Misc utilities functions for profiles"""
+
+    def remove_folders(self, *folders):  # type: (Path) -> None
+        """ Efficiently remove folder whether it's a junction or populated folder. """
+        for folder in folders:
+            try: os.rmdir(folder.s)  # delete junction
+            except OSError: self._move_to_trash(folder)  # populated folder
+            except Exception as e:
+                raise e
+
+    def _move_to_trash(self, folder):  # type: Path
+        """Moving rather than deleting is fast and less error prone. Deleting may cause permission errors, etc."""
+        suffix = datetime.datetime.now().strftime(
+            "%y%m%d_%H%M%S")  # renames must be unique, 'fname_120508_171442'
+        if folder.exists():
+            folder.moveTo('%s/Trash (deleted profiles)/%s (%s)' % (bass.dirs['saveBase'], folder.stail, suffix))
