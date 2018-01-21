@@ -171,32 +171,41 @@ class Save_AdvancedProfile:
             # NB: Any profile named "Default" or "Saves" will display as "Default" when creating the profile.
             self._profile_name = "Default" if profile.stail == "Saves" else profile.stail
 
+        def repair_if_broken(self):
+            """Check and fix any integrity issues with this profile, i.e. recreate missing game Data junction."""
+            self._create_hardlink_files()
+
         def create(self):
             """ Create hard linked copies of {game}/Data and '{game} Mod' folders in the user's profile folder. """
             if self.exists:  # this profile already exists, no need to create it
                 return
-            with balt.BusyCursor():
-                try:
-                    Utilities().remove_folders(self._profile_Data, self._profile_mods)  # ensure no collisions
-                    with balt.Progress(_(u"Creating Advanced Profile") + u' ' * 70) as progress:
-                        progress(0.4, _(u"Initializing the profile's Mods directory.\n"
-                                        u'This may take a few minutes and may appear frozen.'))
-                        subprocess.check_output(
-                            u'%s --output lnMods.log --recursive "%s"  "%s"' % (
-                            self._ln, self._game_mods, self._profile_mods), creationflags=self.CREATE_NO_WINDOW)
-                        progress(0.8, _(u"Initializing the profile's Data directory.\n"
-                                        u'This may take a few minutes and may appear frozen.'))
-                        subprocess.check_output(
-                            u'%s --output lnData.log --recursive "%s"  "%s"' % (
-                            self._ln, self._game_Data, self._profile_Data), creationflags=self.CREATE_NO_WINDOW)
-                except subprocess.CalledProcessError as err:
-                    balt.showError(None,u'Failed to create "%s" profile.\n\n(%s)%s\ncmdline:%s\n%s' % (
-                         self._profile_name, err.returncode, self._returncode_as_string(err.returncode),
-                         err.cmd, err.output))
+            Utilities().remove_folders(self._profile_Data, self._profile_mods)  # ensure no collisions
+            self._create_hardlink_files()
             # Copy loadorder.ini & (pluins.txt) to saves folder. Since no lo inis in Saves, current lo unchanged.
             bosh.modInfos.swapPluginsAndMasterVersion(self._profile, bass.dirs['saveBase'])
             if bass.dirs['saveBase'].join('BashLoadOrders.dat').exists():
                 bass.dirs['saveBase'].join('BashLoadOrders.dat').copyTo(self._profile.join('BashLoadOrders.dat'))
+
+        def _create_hardlink_files(self):
+            with balt.BusyCursor():
+                try:
+                    with balt.Progress(_(u"Creating Advanced Profile") + u' ' * 70) as progress:
+                        progress(0.4, _(u"Initializing the profile's Mods directory.\n"
+                                        u'This may take a few minutes and may appear frozen.'))
+                        if not self._profile_mods.exists():
+                            subprocess.check_output(
+                                u'%s --output lnMods.log --recursive "%s"  "%s"' % (
+                                    self._ln, self._game_mods, self._profile_mods), creationflags=self.CREATE_NO_WINDOW)
+                        progress(0.8, _(u"Initializing the profile's Data directory.\n"
+                                        u'This may take a few minutes and may appear frozen.'))
+                        if not self._profile_Data.exists():
+                            subprocess.check_output(
+                                u'%s --output lnData.log --recursive "%s"  "%s"' % (
+                                    self._ln, self._game_Data, self._profile_Data), creationflags=self.CREATE_NO_WINDOW)
+                except subprocess.CalledProcessError as err:
+                    balt.showError(None, u'Failed to create "%s" profile.\n\n(%s)%s\ncmdline:%s\n%s' % (
+                        self._profile_name, err.returncode, self._returncode_as_string(err.returncode),
+                        err.cmd, err.output))
 
         def activate(self):
             """ Start using this profile by creating junctions for the {game}/Data and '{game} Mods' folders """
@@ -207,9 +216,17 @@ class Save_AdvancedProfile:
                             self._ln, self._game_Data.s, self._profile_Data.s), creationflags=self.CREATE_NO_WINDOW)
                 subprocess.check_output(u'%s --junction "%s" "%s"' % (
                             self._ln, self._game_mods.s, self._profile_mods.s), creationflags=self.CREATE_NO_WINDOW)
+                self._write_recovery_note()
             except Exception as e:
                 message = _(u'Failed to activate "%s" profile.\n%s' % (self._profile_name, e))
                 balt.showError(None, message, u'Advanced Profiles')
+
+        def _write_recovery_note(self):
+            """Record the last active profile so the user can restore game Data folder if it's been deleted."""
+            a = bass.dirs['saveBase'].join('recovery_note.txt').s
+            with open(bass.dirs['saveBase'].join('recovery_note.txt').s, 'w') as f:
+                f.write('# To recover from a missing Data folder, MOVE (not copy) the folder\n%s\n\n# TO\n%s\n' % (
+                    self._profile_Data.s, self._game_Data.s))
 
         @staticmethod
         def _returncode_as_string(err):  # type: (int) -> str
@@ -273,10 +290,13 @@ class Saves_Profiles(ChoiceLink):
                               title=u'Advanced Profile')
                 return
 
+            current_profile = Save_AdvancedProfile(currentPath)
+            current_profile.repair_if_broken()  # if game Data folder is not a junction, replace with a junction
             with balt.BusyCursor():
                 deprint(u'Switching to Advanced profile %s' % (newSaves))
                 # Flush any changes to Installers.dat before swapping. This saving also breaks any hard links!
                 (Settings_SaveSettings()).Execute()
+
                 switchto_profile = Save_AdvancedProfile(switchtoPath)
                 switchto_profile.create()  # may need to create a profile used by SaveProfiles
                 if not switchto_profile.exists:
