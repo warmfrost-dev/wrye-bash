@@ -103,8 +103,8 @@ class Saves_ProfilesData(balt.ListEditorData):
         self.baseSaves.join(newName).makedirs()
         newSaves = u'Saves\\'+newName+u'\\'
         bosh.saveInfos.profiles.setItem(newSaves,'vOblivion',bosh.modInfos.voCurrent)
-        if bass.inisettings['EnableAdvancedProfiles']:
-            new_profile = Save_AdvancedProfile(self.baseSaves.join(newName))
+        if bass.inisettings['EnableProfiles']:
+            new_profile = Profile(self.baseSaves.join(newName))
             new_profile.create()
         return newName
 
@@ -149,15 +149,15 @@ class Saves_ProfilesData(balt.ListEditorData):
         #--Remove directory
         if GPath(bush.game.fsName).join(u'Saves').s not in profileDir.s:
             raise BoltError(u'Sanity check failed: No "%s\\Saves" in %s.' % (bush.game.fsName,profileDir.s))
-        if bass.inisettings['EnableAdvancedProfiles']:
+        if bass.inisettings['EnableProfiles']:
             Utilities().remove_folders(profileDir)
         else:  # preserve classic profile behavior by deleting the folder
             shutil.rmtree(profileDir.s)  # --DO NOT SCREW THIS UP!!!
         bosh.saveInfos.profiles.delRow(profileSaves)
         return True
 
-class Save_AdvancedProfile:
-        """Handle creating, activating and deactivating an Advanced Profile."""
+class Profile(object):
+        """Handle creating, activating and deactivating a profile."""
 
         CREATE_NO_WINDOW = 0x08000000  # flag to hide the console window
 
@@ -181,15 +181,16 @@ class Save_AdvancedProfile:
                 return
             Utilities().remove_folders(self._profile_Data, self._profile_mods)  # ensure no collisions
             self._create_hardlink_files()
-            # Copy loadorder.ini & (pluins.txt) to saves folder. Since no lo inis in Saves, current lo unchanged.
-            bosh.modInfos.swapPluginsAndMasterVersion(self._profile, bass.dirs['saveBase'])
+            # Copy LOCAL loadorder.ini & (pluins.txt) to new saves folder which is oldsave for swapPlugins..()
+            #    pass empty directory 'Trash' as 2nd argument so nothing is copied back to LOCAL
+            bosh.modInfos.swapPluginsAndMasterVersion(self._profile, bass.dirs['saveBase'].join('Trash'))
             if bass.dirs['saveBase'].join('BashLoadOrders.dat').exists():
                 bass.dirs['saveBase'].join('BashLoadOrders.dat').copyTo(self._profile.join('BashLoadOrders.dat'))
 
         def _create_hardlink_files(self):
             with balt.BusyCursor():
                 try:
-                    with balt.Progress(_(u"Creating Advanced Profile") + u' ' * 70) as progress:
+                    with balt.Progress(_(u"Creating a Profile") + u' ' * 70) as progress:
                         progress(0.4, _(u"Initializing the profile's Mods directory.\n"
                                         u'This may take a few minutes and may appear frozen.'))
                         if not self._profile_mods.exists():
@@ -219,7 +220,7 @@ class Save_AdvancedProfile:
                 self._write_recovery_note()
             except Exception as e:
                 message = _(u'Failed to activate "%s" profile.\n%s' % (self._profile_name, e))
-                balt.showError(None, message, u'Advanced Profiles')
+                balt.showError(None, message, u'Profiles')
 
         def _write_recovery_note(self):
             """Record the last active profile so the user can restore game Data folder if it's been deleted."""
@@ -283,22 +284,22 @@ class Saves_Profiles(ChoiceLink):
             """ Activate a profile by creating Junctions to {saves}/{profile} and {game}/Data. """
             currentPath, switchtoPath = (bass.dirs['saveBase'].join(saves) for saves in (arcSaves, newSaves))
             if  bass.dirs['mods'].drive() != switchtoPath.drive() or os.name != 'nt':  # ln.exe only works on windows
-                balt.showInfo(None, u'Advanced profiles only work on Windows systems where the Game '
+                balt.showInfo(None, u'Profiles only work on Windows systems where the Game '
                                     u'and Saves directories are on the same drive.\n'
-                                    u'Please disable the bEnableAdvancedProfiles setting in the Bash.ini file '
-                                    u'to revert to classic profiles',
-                              title=u'Advanced Profile')
+                                    u'Please disable the bEnableProfiles setting in the Bash.ini file '
+                                    u'to revert to Save profiles',
+                              title=u'Profile')
                 return
 
-            current_profile = Save_AdvancedProfile(currentPath)
+            current_profile = Profile(currentPath)
             current_profile.repair_if_broken()  # if game Data folder is not a junction, replace with a junction
             with balt.BusyCursor():
-                deprint(u'Switching to Advanced profile %s' % (newSaves))
+                deprint(u'Switching to profile %s' % (newSaves))
                 # Flush any changes to Installers.dat before swapping. This saving also breaks any hard links!
                 (Settings_SaveSettings()).Execute()
 
-                switchto_profile = Save_AdvancedProfile(switchtoPath)
-                switchto_profile.create()  # may need to create a profile used by SaveProfiles
+                switchto_profile = Profile(switchtoPath)
+                switchto_profile.create()  # may need to convert a profile used by SaveProfiles
                 if not switchto_profile.exists:
                     return    # encountered an error
                 switchto_profile.activate()
@@ -315,7 +316,7 @@ class Saves_Profiles(ChoiceLink):
                 # data in the just swapped in Data and Mod Installers folders.
                 Link.Frame.Restart()
 
-        def _swap_classic_profiles(self, arcSaves, newSaves):
+        def _swap_saves_profiles(self, arcSaves, newSaves):
             with balt.BusyCursor():
                 bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
                 bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
@@ -330,10 +331,10 @@ class Saves_Profiles(ChoiceLink):
             # NB: Tried using abstract classes to separate but that required more code changes than this simple IF.
             arcSaves = bosh.saveInfos.localSave
             newSaves = self.relativePath
-            if bass.inisettings['EnableAdvancedProfiles']:
+            if bass.inisettings['EnableProfiles']:
                 self._switch_profiles(arcSaves, newSaves)
             else:
-                self._swap_classic_profiles(arcSaves, newSaves)
+                self._swap_saves_profiles(arcSaves, newSaves)
 
     choiceLinkType = _ProfileLink
 
@@ -354,7 +355,7 @@ class Saves_Profiles(ChoiceLink):
         def Execute(self):
             """Show save profiles editing dialog."""
             data = Saves_ProfilesData(self.window)
-            profile_type = u'Advanced Profiles' if bass.inisettings['EnableAdvancedProfiles'] else u'Save Profiles'
+            profile_type = u'Profiles' if bass.inisettings['EnableProfiles'] else u'Save Profiles'
             balt.ListEditor.Display(self.window, profile_type, data)
 
     extraItems = [_Edit(), SeparatorLink(), _Default()]

@@ -3051,7 +3051,7 @@ def initDefaultSettings():
     inisettings['PromptActivateBashedPatch'] = True
     inisettings['WarnTooManyFiles'] = True
     inisettings['SkippedBashInstallersDirs'] = u''
-    inisettings['EnableAdvancedProfiles'] = False
+    inisettings['EnableProfiles'] = False
 
 def initOptions(bashIni):
     initDefaultTools()
