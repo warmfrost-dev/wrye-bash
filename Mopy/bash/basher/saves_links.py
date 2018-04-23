@@ -184,8 +184,6 @@ class Profile(object):
             # Copy LOCAL loadorder.ini & (pluins.txt) to new saves folder which is oldsave for swapPlugins..()
             #    pass empty directory 'Trash' as 2nd argument so nothing is copied back to LOCAL
             bosh.modInfos.swapPluginsAndMasterVersion(self._profile, bass.dirs['saveBase'].join('Trash'))
-            if bass.dirs['saveBase'].join('BashLoadOrders.dat').exists():
-                bass.dirs['saveBase'].join('BashLoadOrders.dat').copyTo(self._profile.join('BashLoadOrders.dat'))
 
         def _create_hardlink_files(self):
             with balt.BusyCursor():
@@ -252,6 +250,22 @@ class Profile(object):
         def is_active(self):
             return self._game_Data.exists() and self._game_mods.exists()
 
+class SwapAssociatedProfileFiles:
+    """Swap (deactive current files, active new) support files associated with a profile"""
+    def __init__(self, currentPath, switchtoPath):
+        ini_paths = tuple(ini.abs_path for ini in bosh.gameInis)  # bosh.gamInis: OblivionIni   ini: bolt.Path
+        self._swap_profile_files(currentPath, switchtoPath, ini_paths)
+        lo = bass.dirs['saveBase'].join('BashLoadOrders.dat'), bass.dirs['saveBase'].join('BashLoadOrders.dat.bak')
+        self._swap_profile_files(currentPath, switchtoPath, lo)
+
+    def _swap_profile_files(self, currentPath, switchtoPath, profile_files):
+        """ Swap files associated with profiles, i.e. active and deactivate. """
+        for profile_file in profile_files:
+            if profile_file.exists():
+                profile_file.copyTo(currentPath.join(profile_file.tail))
+            if switchtoPath.join(profile_file.tail).exists():
+                switchtoPath.join(profile_file.tail).copyTo(profile_file)
+
 #------------------------------------------------------------------------------
 class Saves_Profiles(ChoiceLink):
     """Select a save set profile -- i.e., the saves directory."""
@@ -269,15 +283,6 @@ class Saves_Profiles(ChoiceLink):
         def relativePath(self): return u'Saves\\' + self._text + u'\\'
         def _check(self): return Saves_Profiles.local == self.relativePath
         def _enable(self): return not self._check()
-
-        def _swap_BashLoadOrder(self, currentPath, switchtoPath):
-            # type: (bolt.Path, bolt.Path) -> None
-            """ Swap load order archive files to keep load order and profile in sync. """
-            for loadorder_file in ('BashLoadOrders.dat', 'BashLoadOrders.dat.bak'):
-                if bass.dirs['saveBase'].join(loadorder_file).exists():
-                    bass.dirs['saveBase'].join(loadorder_file).copyTo(currentPath.join(loadorder_file))
-                if switchtoPath.join(loadorder_file).exists():
-                    switchtoPath.join(loadorder_file).copyTo(bass.dirs['saveBase'].join(loadorder_file))
 
         def _switch_profiles(self, arcSaves, newSaves):
             # type: (bolt.Path, bolt.Path) -> None | 'restarts Bash'
@@ -308,9 +313,9 @@ class Saves_Profiles(ChoiceLink):
                                 u'If so, create a Junction named Data in the Game folder pointing to %s. ' % currentPath.s)
                     balt.showError(None, message)
                     return
-                bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False)
                 bosh.modInfos.swapPluginsAndMasterVersion(arcSaves, newSaves)
-                self._swap_BashLoadOrder(currentPath, switchtoPath)
+                SwapAssociatedProfileFiles(currentPath, switchtoPath)
+                bosh.saveInfos.setLocalSave(newSaves, refreshSaveInfos=False) # this writes to ini so follow SwapAssociatedProfileFiles
 
                 # Restarting Bash is the simplest way to guarantee all caches and buffers reflect the
                 # data in the just swapped in Data and Mod Installers folders.
