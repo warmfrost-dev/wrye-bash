@@ -174,6 +174,7 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
         dirs['modsBash'], dirs['app'].join(u'Data', u'Bash'),
         modsBashSrc, u'Relative Path')
 
+    dirs['modsRoot'] = oblivionMods  # abs path to '{game} Mods' folder as root for hard linking staged profiles
     dirs['installers'] = oblivionMods.join(u'Bash Installers')
     dirs['installers'] = getLegacyPath(dirs['installers'],
                                        dirs['app'].join(u'Installers'))
@@ -276,5 +277,8 @@ def getLocalSaveDirs():
         except UnicodeEncodeError:
             bad.add(folder)
     localSaveDirs = [x for x in localSaveDirs if x not in bad]
+    # Do not let Default's staged profile folders display as other profiles.
+    localSaveDirs = [x for x in localSaveDirs if (x.cs.lower() not in (
+               u'bash', u'mods', u'data', u'trash', u'bash installers', u'bash mod data'))]
     localSaveDirs.sort()
     return localSaveDirs
