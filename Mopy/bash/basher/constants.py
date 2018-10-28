@@ -310,7 +310,9 @@ settingDefaults = { ##: (178) belongs to bosh (or better to a settings package)
     'bash.installers.onDropFiles.action':None,
     'bash.installers.commentsSplitterSashPos':0,
     #--Wrye Bash: Wizards
-    'bash.wizard.size': (600,500),
+    'bash.fomod.size': (600, 500),
+    'bash.fomod.pos': tuple(defPos),
+    'bash.wizard.size': (600, 500),
     'bash.wizard.pos': tuple(defPos),
     #--Wrye Bash: INI Tweaks
     'bash.ini.cols': ['File','Installer'],
