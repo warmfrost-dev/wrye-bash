@@ -286,6 +286,10 @@ class IniFile(AFile):
             tmpFileWrite = tmpFile.write
             def _add_remaining_new_items():
                 if section in ini_settings: del ini_settings[section]
+                try: #TODO: wf When switching profiles, WB is trying to delete the CIstr(u'Actor') section twice?
+                    del ini_settings[section]
+                except KeyError:
+                    pass
                 if not sectionSettings: return
                 for sett, val in sectionSettings.iteritems():
                     tmpFileWrite(u'%s=%s\n' % (sett, val))
