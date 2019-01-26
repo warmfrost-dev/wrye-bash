@@ -110,6 +110,10 @@ class Saves_ProfilesData(balt.ListEditorData):
 
     def rename(self,oldName,newName):
         """Renames profile oldName to newName."""
+        if bass.inisettings['EnableProfiles']: # renaming profile will break junctions that points to oldName
+            if bosh.saveInfos.localSave == u'Saves\\'+oldName+u'\\':
+                balt.showError(self.parent,_(u'Active profile cannot be renamed.'))
+                return False
         newName = newName.strip()
         lowerNames = [name.lower() for name in self.getItemList()]
         #--Error checks
