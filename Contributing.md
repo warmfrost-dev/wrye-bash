@@ -143,15 +143,14 @@ Once this is done a couple times you get *write* privileges.
 
 #### Main Branches
 
-* [dev](https://github.com/wrye-bash/wrye-bash/tree/dev): the main development
-branch - approved commits end up here. Do not directly push to this branch -
-push to your branches and contact someone from the owners team in the relevant
-issue.
-* [master](https://github.com/wrye-bash/wrye-bash/tree/master): the production
-branch, contains stable releases. Use it only as reference.
-* [utumno-wip](https://github.com/wrye-bash/wrye-bash/tree/utumno-wip):
-bleeding edge dev branch. Do have a look if interested in contributing or
-testing very latest features/fixes.
+- [`dev`](https://github.com/wrye-bash/wrye-bash/tree/dev): the main development
+ branch - approved commits end up here. _Do not directly push to this branch_ -
+ push to your branches and contact someone from the owners team in the relevant
+ issue.
+- [`master`](https://github.com/wrye-bash/wrye-bash/tree/master): the production
+ branch, contains stable releases. Use it _only_ as reference.
+- [`nightly`](https://github.com/wrye-bash/wrye-bash/tree/nightly):
+bleeding edge branch. Commits land here for testing.
 
 #### Governance Model
 
