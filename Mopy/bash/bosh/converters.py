@@ -606,5 +606,5 @@ class InstallerConverter(object):
                 tempList.remove()
                 bolt.clearReadOnly(subTempDir) ##: do this once
         #--Recursively unpack subArchives
-        for archive in map(subTempDir.join, subArchives):
+        for archive in (subTempDir.join(a) for a in subArchives):
             self._unpack(archive, [u'*']) # it will also unpack the embedded BCF if any...

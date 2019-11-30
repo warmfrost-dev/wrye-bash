@@ -200,7 +200,7 @@ class _AliasesPatcherPanel(_PatcherPanel):
         aliases_text = self.gAliases.text_content
         self._ci_aliases.clear()
         for line in aliases_text.split(u'\n'):
-            fields = map(unicode.strip,line.split(u'>>'))
+            fields = [s.strip() for s in line.split(u'>>')]
             if len(fields) != 2 or not fields[0] or not fields[1]: continue
             self._ci_aliases[GPath(fields[0])] = GPath(fields[1])
         self.SetAliasText()
@@ -210,8 +210,8 @@ class _AliasesPatcherPanel(_PatcherPanel):
         """Get config from configs dictionary and/or set to default."""
         config = super(_AliasesPatcherPanel, self).getConfig(configs)
         #--Update old configs to use Paths instead of strings.
-        self._ci_aliases = dict(# map(GPath, item) gives a list (item is a tuple)
-            map(GPath, item) for item in
+        self._ci_aliases = dict(
+            [GPath(i) for i in item] for item in
             (config.get(u'aliases', {}) or config.get(b'aliases', {})).iteritems())
         return config
 

@@ -2953,7 +2953,7 @@ class InstallersData(DataStore):
         def installable(x): # type -> 0: unset/invalid; 1: simple; 2: complex
             return self[x].type in (1, 2) and (
                         self[x].is_archive() or self[x].is_project())
-        return filter(installable, installerKeys)
+        return [k for k in installerKeys if installable(k)]
 
     def filterPackages(self, installerKeys):
         """Remove markers from installerKeys.

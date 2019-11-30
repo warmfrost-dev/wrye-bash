@@ -473,7 +473,7 @@ class InstallerProject_OmodConfigDialog(WindowFrame):
         maVersion = re.match(u'' r'(\d+)\.(\d+)',
                              self.gVersion.text_content.strip(), flags=re.U)
         if maVersion:
-            config.vMajor,config.vMinor = map(int,maVersion.groups())
+            config.vMajor,config.vMinor = (int(g) for g in maVersion.groups())
         else:
             config.vMajor,config.vMinor = (0,0)
         #--Done

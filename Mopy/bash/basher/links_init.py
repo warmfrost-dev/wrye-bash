@@ -805,7 +805,7 @@ def InitScreenLinks():
     #--JPEG Quality
     if True:
         qualityMenu = MenuLink(_(u'JPEG Quality'))
-        for i in range(100, 80, -5):
+        for i in xrange(100, 80, -5):
             qualityMenu.links.append(Screens_JpgQuality(i))
         qualityMenu.links.append(Screens_JpgQualityCustom())
         ScreensList.column_links.append(SeparatorLink())

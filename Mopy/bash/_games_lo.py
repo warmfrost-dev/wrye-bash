@@ -1089,7 +1089,7 @@ class AsteriskGame(Game):
         if to_drop:
             # If we need to drop some mods, then make a backup first
             self._backup_load_order()
-            msg = (u'Removed ' + u' ,'.join(map(unicode, to_drop)) +
+            msg = (u'Removed ' + u' ,'.join(unicode(s) for s in to_drop) +
                    u' from %s')
         if not exists or to_drop:
             # In either case, write out the LO and deprint it

@@ -202,7 +202,8 @@ class ReplaceFormIDsPatcher(ListPatcher):
             for fields in ins:
                 if len(fields) < 7 or fields[2][:2] != u'0x' or fields[6][:2] != u'0x': continue
                 oldMod,oldObj,oldEid,newEid,newMod,newObj = fields[1:7]
-                oldMod,newMod = map(GPath,(oldMod,newMod))
+                oldMod = GPath(oldMod)
+                newMod = GPath(newMod)
                 oldId = (GPath(aliases.get(oldMod,oldMod)),int(oldObj,16))
                 newId = (GPath(aliases.get(newMod,newMod)),int(newObj,16))
                 old_new[oldId] = newId
