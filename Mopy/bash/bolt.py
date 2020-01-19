@@ -474,7 +474,7 @@ class Path(object):
         return len(self._s)
 
     def __repr__(self):
-        return u"bolt.Path("+repr(self._s)+u")"
+        return u'bolt.Path(%r)' % self._s
 
     def __unicode__(self):
         return self._s
@@ -1783,18 +1783,6 @@ def csvFormat(format_chars, __formats=_formats):
 
 deprintOn = False
 
-class tempDebugMode(object):
-    __slots__= '_old'
-    def __init__(self):
-        global deprintOn
-        self._old = deprintOn
-        deprintOn = True
-
-    def __enter__(self): return self
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        global deprintOn
-        deprintOn = self._old
-
 import inspect
 def deprint(*args,**keyargs):
     """Prints message along with file and line location."""
@@ -1816,7 +1804,7 @@ def deprint(*args,**keyargs):
             try:
                 msg += u' %s' % x
             except UnicodeError:
-                msg += u' %s' % repr(x)
+                msg += u' %r' % x
 
     if keyargs.get('traceback',False):
         o = StringIO.StringIO()
@@ -1826,7 +1814,7 @@ def deprint(*args,**keyargs):
             msg += u'\n%s' % unicode(value, 'utf-8')
         except UnicodeError:
             traceback.print_exc()
-            msg += u'\n%s' % repr(value)
+            msg += u'\n%r' % value
         o.close()
     try:
         # Should work if stdout/stderr is going to wxPython output
