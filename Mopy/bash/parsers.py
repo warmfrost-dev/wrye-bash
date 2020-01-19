@@ -462,16 +462,14 @@ class CBash_ActorFactions(object):
     importing/exporting from/to mod/text file."""
 
     def __init__(self,aliases=None):
-        self.group_fid_factions = {b'CREA': {}, b'NPC_': {}} #--factions =
-        # group_fid_factions[group][longid]
+        self.group_fid_factions = {u'CREA': {}, u'NPC_': {}} # u'' is needed!
         self.fid_eid = {}
         self.aliases = aliases or {}
         self.gotFactions = set()
 
     def readFromMod(self,modInfo):
         """Imports faction data from specified mod."""
-        group_fid_factions,fid_eid,gotFactions = self.group_fid_factions,\
-                                                 self.fid_eid,self.gotFactions
+        gotFactions, fid_eid = self.gotFactions, self.fid_eid
         with ObCollection(ModsPath=dirs['mods'].s) as Current:
             importFile = Current.addMod(modInfo.getPath().stail,Saveable=False)
             Current.load()
@@ -481,10 +479,8 @@ class CBash_ActorFactions(object):
                 for record in modFile.FACT:
                     fid_eid[record.fid] = record.eid
                 if modFile != importFile: continue
-                types = {b'CREA': modFile.CREA, b'NPC_': modFile.NPC_}
-                for group,block in types.iteritems():
-                    fid_factions = group_fid_factions[group]
-                    for record in block:
+                for group, fid_factions in self.group_fid_factions.iteritems():
+                    for record in getattr(modFile, group):
                         fid = record.fid
                         factions = record.factions_list
                         if factions:
@@ -495,18 +491,15 @@ class CBash_ActorFactions(object):
 
     def writeToMod(self,modInfo):
         """Exports faction data to specified mod."""
-        group_fid_factions = self.group_fid_factions
         with ObCollection(ModsPath=dirs['mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = Counter() # {'CREA':0,'NPC_':0}
-            types = {b'CREA': modFile.CREA, b'NPC_': modFile.NPC_}
-            for group,block in types.iteritems():
-                fid_factions = group_fid_factions.get(group,None)
+            for group, fid_factions in self.group_fid_factions.iteritems():
                 if fid_factions is not None:
                     fid_factions = FormID.FilterValidDict(fid_factions,modFile,
                                                           True,False)
-                    for record in block:
+                    for record in getattr(modFile, group):
                         fid = record.fid
                         if fid not in fid_factions: continue
                         newFactions = set([(faction,rank) for faction,rank in
@@ -554,7 +547,7 @@ class CBash_ActorFactions(object):
 
     def writeToText(self,textPath):
         """Exports faction data to specified text file."""
-        group_fid_factions,fid_eid = self.group_fid_factions, self.fid_eid
+        fid_eid = self.fid_eid
         headFormat = u'"%s","%s","%s","%s","%s","%s","%s","%s"\n'
         rowFormat = u'"%s","%s","%s","0x%06X","%s","%s","0x%06X","%s"\n'
         with textPath.open(u'w', encoding=u'utf-8-sig') as out:
@@ -562,8 +555,8 @@ class CBash_ActorFactions(object):
                 _(u'Type'),_(u'Actor Eid'),_(u'Actor Mod'),_(u'Actor Object'),
                 _(u'Faction Eid'),_(u'Faction Mod'),_(u'Faction Object'),
                 _(u'Rank')))
-            for group in sorted(group_fid_factions):
-                fid_factions = group_fid_factions[group]
+            for group, fid_factions in sorted(
+                    self.group_fid_factions.iteritems()):
                 for fid in sorted(fid_factions,key = lambda x: fid_eid.get(x)):
                     actorEid = fid_eid.get(fid,u'Unknown')
                     for faction,rank in sorted(fid_factions[fid],
