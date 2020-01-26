@@ -42,6 +42,15 @@ import traceback
 from . import bass
 from . import bolt
 
+def _real_sys_prefix():
+    """Needed to work around virtualenvs not copying the Tools folder over."""
+    if hasattr(sys, u'real_prefix'): # running in virtualenv
+        return sys.real_prefix
+    elif hasattr(sys, u'base_prefix'): # running in venv
+        return sys.base_prefix
+    else:
+        return sys.prefix
+
 #------------------------------------------------------------------------------
 # Locale Detection & Setup
 def setup_locale(cli_lang, _wx):
@@ -113,7 +122,7 @@ def setup_locale(cli_lang, _wx):
                     sys.argv = old_argv
                 else:
                     # msgfmt is only in Tools, so call it explicitly
-                    m = os.path.join(sys.prefix, u'Tools', u'i18n',
+                    m = os.path.join(_real_sys_prefix(), u'Tools', u'i18n',
                                      u'msgfmt.py')
                     subprocess.call([sys.executable, m, u'-o', mo, po],
                                     shell=True)
@@ -185,7 +194,7 @@ def dump_translator(out_path, lang):
     else:
         # pygettext is only in Tools, so call it explicitly
         gt_args[0] = sys.executable
-        gt_args.insert(1, os.path.join(sys.prefix, u'Tools', u'i18n',
+        gt_args.insert(1, os.path.join(_real_sys_prefix(), u'Tools', u'i18n',
                                        u'pygettext.py'))
         subprocess.call(gt_args, shell=True)
     # Fill in any already translated stuff...?

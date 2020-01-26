@@ -1,0 +1,25 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+loot_api = {file = "https://bintray.com/loot/snapshots/download_file?file_path=loot_api_python-4.0.2-7-g580bf87_master-python2.7-win64.zip"}
+pyfiglet = "~=0.8"
+pygit2 = "~=0.28"
+py2exe = {file = "https://github.com/wrye-bash/dev-tools/raw/64bit-wheels/wheels/py2exe-0.6.10a1-cp27-none-win_amd64.whl"}
+
+[packages]
+chardet = "~=3.0"
+lz4 = "~=2.2"
+pywin32 = "==224"
+pyyaml = "~=5.3"
+scandir = "~=1.10"
+wxpython = "~=4.0"
+
+[requires]
+python_version = "2.7"
+
+[scripts]
+bash = "python \"Mopy/Wrye Bash Launcher.pyw\""
+build = "python scripts/build.py"

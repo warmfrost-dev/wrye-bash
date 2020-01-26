@@ -58,16 +58,19 @@ longer supported.
 Once you have those, install the required packages by running:
 
 ```bash
-path/to/python.exe -m pip install -r requirements.txt
+path/to/python.exe -m pip install pipenv
+path/to/python.exe -m pipenv sync --dev
 ```
+
+**Note**: Python 2.7.17 seems to be [somewhat broken with pipenv][31] on Windows.
+Try downgrading to Python 2.7.16 if you experience issues.
 
 Refer to the readmes for [detailed instructions][12]. In short:
 
 1. Install one of the supported games (Oblivion, Skyrim, Fallout).
-2. Install Python and plugins above.
-3. Extract the downloaded Wrye Bash archive into your game folder.
-4. Run Wrye Bash by double-clicking "Wrye Bash Launcher.pyw" in the new Mopy
- folder.
+2. Extract the downloaded Wrye Bash archive (or clone it via git).
+3. Install Python and plugins above.
+4. Run Wrye Bash with `path/to/python.exe -m pipenv run bash`.
 
 #### WINE
 
@@ -85,7 +88,7 @@ def setUAC(button_,uac=True):
 ...
 ```
 
-3. Run Bash as `wine python /path/to/Mopy/Wrye Bash Launcher.pyw`
+3. Run Bash as `wine python -m pipenv run bash`
 
 For details see our [wiki article][15].
 Wine issue: [#240][16]
@@ -164,3 +167,4 @@ bleeding edge branch. Commits land here for testing.
   [28]: https://github.com/wrye-bash/wrye-bash/wiki/%5Bgithub%5D-Branching-and-merging-to-dev-using-rebase
   [29]: https://github.com/wrye-bash/wrye-bash/wiki/%5Bdev%5D-Coding-Style
   [30]: https://www.nexusmods.com/enderal/mods/97
+  [31]: https://github.com/pypa/pipenv/issues/3494
