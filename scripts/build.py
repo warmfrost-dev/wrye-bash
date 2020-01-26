@@ -48,6 +48,7 @@ import tempfile
 import zipfile
 import _winreg as winreg  # PY3
 from contextlib import contextmanager
+from distutils.dir_util import copy_tree
 
 import pygit2
 
@@ -174,7 +175,7 @@ def cpy(src, dst):
        directory as needed."""
     if os.path.isdir(src):
         if not os.path.exists(dst):
-            os.makedirs(dst)
+            copy_tree(src, dst)
     else:
         # file
         dstdir = os.path.dirname(dst)
@@ -239,7 +240,8 @@ def pack_manual(version):
     join = os.path.join
     files_to_include = {
         join(ROOT_PATH, u"Readme.md"): join(MOPY_PATH, u"Readme.md"),
-        join(ROOT_PATH, u"requirements.txt"): join(MOPY_PATH, u"requirements.txt"),
+        join(ROOT_PATH, u"Pipfile"): join(MOPY_PATH, u"Pipfile"),
+        join(ROOT_PATH, u"Pipfile.lock"): join(MOPY_PATH, u"Pipfile.lock"),
         join(WBSA_PATH, u"bash.ico"): join(MOPY_PATH, u"bash.ico"),
     }
     for orig, target in files_to_include.items():
@@ -419,6 +421,32 @@ def check_timestamp(build_version):
                 return False
     return True
 
+# TODO(inf) Copy-pasted from setup.py
+def real_sys_prefix():
+    if hasattr(sys, "real_prefix"):  # running in virtualenv
+        return sys.real_prefix
+    elif hasattr(sys, "base_prefix"):  # running in venv
+        return sys.base_prefix
+    else:
+        return sys.prefix
+
+@contextmanager
+def handle_distutils():
+    distutils_suffix = os.path.join(u"Lib", u"distutils")
+    real_path = os.path.join(real_sys_prefix(), distutils_suffix)
+    actual_path = os.path.join(sys.prefix, distutils_suffix)
+    if real_path != actual_path:
+        tmpdir = tempfile.mkdtemp()
+        LOGGER.debug("Moving virtualenv distutils to {}".format(tmpdir))
+        mv(actual_path, tmpdir)
+        cpy(real_path, actual_path)
+    try:
+        yield
+    finally:
+        if real_path != actual_path:
+            rm(actual_path)
+            mv(os.path.join(tmpdir, u"distutils"), os.path.dirname(actual_path))
+            rm(tmpdir)
 
 def main(args):
     utils.setup_log(LOGGER, verbosity=args.verbosity, logfile=LOGFILE)
@@ -435,13 +463,14 @@ def main(args):
             pack_manual(args.version)
         if not args.standalone and not args.installer:
             return
-        with build_executable(args.version, version_info):
-            if args.standalone:
-                LOGGER.info("Creating standalone distributable...")
-                pack_standalone(args.version)
-            if args.installer:
-                LOGGER.info("Creating installer distributable...")
-                pack_installer(args.nsis, args.version, version_info)
+        with handle_distutils():
+            with build_executable(args.version, version_info):
+                if args.standalone:
+                    LOGGER.info("Creating standalone distributable...")
+                    pack_standalone(args.version)
+                if args.installer:
+                    LOGGER.info("Creating installer distributable...")
+                    pack_installer(args.nsis, args.version, version_info)
 
 
 @contextmanager
