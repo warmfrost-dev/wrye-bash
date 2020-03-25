@@ -31,7 +31,7 @@ import wx.adv as wiz
 from .. import balt, bass, bolt, bosh, bush, env
 from ..gui import CENTER, CheckBox, HBoxedLayout, HLayout, Label, \
     LayoutOptions, TextArea, VLayout, WizardDialog, EventResult, \
-    PictureWithCursor
+    PictureWithCursor, RadioButton
 from ..fomod import FailedCondition, FomodInstaller
 
 class FomodInstallInfo(object):
@@ -231,10 +231,8 @@ class PageSelect(PageInstaller):
                                                    u'SelectAtLeastOne')
             for option in group:
                 if group_type in (u'SelectExactlyOne', u'SelectAtMostOne'):
-                    # TODO(inf) de-wx!
-                    button = wx.RadioButton(
-                        panel_groups, label=option.name,
-                        style=wx.RB_GROUP if option is group[0] else 0)
+                    button = RadioButton(panel_groups, label=option.name,
+                                         is_group=option is group[0])
                 else:
                     button = CheckBox(panel_groups, label=option.name)
                     if group_type == u'SelectAll':
@@ -242,35 +240,35 @@ class PageSelect(PageInstaller):
                         any_selected = True
                         button.enabled = False
                 if option.type == u'Required':
-                    SetComponentValue_(button, True)
+                    button.is_checked =  True
                     any_selected = True
                     if group_type in (u'SelectExactlyOne', u'SelectAtMostOne'):
                         required_disable = True
                     else:
-                        EnableComponent_(button, False)
+                        button.enabled = False
                 elif option.type == u'Recommended':
                     if not any_selected or not group_force_selection:
-                        SetComponentValue_(button, True)
+                        button.is_checked = True
                         any_selected = True
                 elif option.type in (u'Optional', u'CouldBeUsable'):
                     if first_selectable is None:
                         first_selectable = button
                 elif option.type == u'NotUsable':
-                    SetComponentValue_(button, False)
-                    EnableComponent_(button, False)
+                    button.is_checked = False
+                    button.enabled = False
                 # TODO(inf) This is very hacky, there has to a better way than
                 #  abusing __dict__ for this
                 LinkOptionObject_(button, option)
                 options_layout.add(button)
-                BindCallback_(button, wx.EVT_ENTER_WINDOW, self.on_hover)
+                button._native_widget.Bind(wx.EVT_ENTER_WINDOW, self.on_hover)
                 self.group_option_map[group].append(button)
             if not any_selected and group_force_selection:
                 if first_selectable is not None:
-                    SetComponentValue_(first_selectable, True)
+                    first_selectable.is_checked = True
                     any_selected = True
             if required_disable:
                 for button in self.group_option_map[group]:
-                    EnableComponent_(button, False)
+                    button.enabled = False
             if group_type == u'SelectAtMostOne':
                 none_button = wx.RadioButton(panel_groups, label=_(u'None'))
                 if not any_selected:
@@ -316,7 +314,7 @@ class PageSelect(PageInstaller):
         selection = []
         for group, option_buttons in self.group_option_map.iteritems():
             group_selected = [a.option_object for a in option_buttons
-                              if GetComponentValue_(a)]
+                              if a.is_checked]
             option_len = len(group_selected)
             if group.type == u'SelectExactlyOne' and option_len != 1:
                 msg = _(u'Group "{}" should have exactly 1 option selected '
@@ -342,7 +340,7 @@ class PageSelect(PageInstaller):
         for button_list in self.group_option_map.itervalues():
             for button in button_list:
                 if button.option_object in selection:
-                    SetComponentValue_(button, True)
+                    button.is_checked = True
 
 class PageFinish(PageInstaller):
     def __init__(self, parent):
@@ -378,30 +376,7 @@ class PageFinish(PageInstaller):
         return u'\n'.join(lines)
 
 # FIXME(inf) Hacks until wx.RadioButton is wrapped, ugly names are on purpose
-def EnableComponent_(component, is_enabled):
-    if isinstance(component, wx.RadioButton):
-        component.Enable(is_enabled)
-    else:
-        component.enabled = is_enabled
-
-def SetComponentValue_(component, target_value):
-    if isinstance(component, wx.RadioButton):
-        component.SetValue(target_value)
-    else:
-        component.is_checked = target_value
-
-def GetComponentValue_(component):
-    if isinstance(component, wx.RadioButton):
-        return component.GetValue()
-    else:
-        return component.is_checked
-
-def BindCallback_(component, wx_event, target_callback):
-    target = (component if isinstance(component, wx.RadioButton)
-              else component._native_widget)
-    target.Bind(wx_event, target_callback)
-
 def LinkOptionObject_(component, target_option):
     component.option_object = target_option
-    if not isinstance(component, wx.RadioButton):
+    if not isinstance(component, RadioButton):
         component._native_widget.option_object = target_option

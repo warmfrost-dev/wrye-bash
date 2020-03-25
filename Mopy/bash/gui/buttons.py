@@ -29,7 +29,7 @@ __author__ = u'nycz, Infernio'
 
 import wx as _wx
 
-from .base_components import _AComponent
+from .base_components import _AComponent, Checkable
 
 class _AButton(_AComponent):
     """Abstract base class for all buttons."""
@@ -273,3 +273,9 @@ class ClickableImage(ImageButton):
         super(ClickableImage, self).__init__(parent, image,
                                              btn_tooltip=btn_tooltip,
                                              exact_fit=True, no_border=True)
+
+class RadioButton(Checkable, _AButton):
+    def __init__(self, parent, label, is_group=False):
+        style = is_group and _wx.RB_GROUP
+        super(RadioButton, self).__init__(_wx.RadioButton, parent, label=label,
+                                          style=style)

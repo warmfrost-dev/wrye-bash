@@ -480,3 +480,21 @@ class Image(object):
         # This only has an effect on jpegs, so it's ok to do it on every kind
         bitmap.SetOption(_wx.IMAGE_OPTION_QUALITY, quality)
         return bitmap
+
+class Checkable(_AComponent):
+
+    @property
+    def is_checked(self): # type: () -> bool
+        """Return True if this component is checked.
+
+        :return: True if this checkbox is checked."""
+        return self._native_widget.GetValue()
+
+    @is_checked.setter
+    def is_checked(self, new_state): # type: (bool) -> None
+        """Mark this component as either checked or unchecked, depending on the
+        value of new_state.
+
+        :param new_state: True if this component should be checked, False if it
+                          should be unchecked."""
+        self._native_widget.SetValue(new_state)

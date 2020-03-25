@@ -30,7 +30,7 @@ __author__ = u'nycz, Infernio, Utumno'
 import wx as _wx
 
 from .base_components import _AComponent, Color, WithMouseEvents, \
-    WithCharEvents, Image
+    WithCharEvents, Image, Checkable
 from .events import EventResult
 from ..bolt import deprint, Path
 
@@ -44,7 +44,7 @@ class Font(_wx.Font):
         font_.SetUnderlined(underline)
         return font_
 
-class CheckBox(_AComponent):
+class CheckBox(Checkable):
     """Represents a simple two-state checkbox.
 
     Events:
@@ -68,22 +68,6 @@ class CheckBox(_AComponent):
         # Events
         self.on_checked = self._evt_handler(_wx.EVT_CHECKBOX,
                                             lambda event: [event.IsChecked()])
-
-    @property
-    def is_checked(self): # type: () -> bool
-        """Returns True if this checkbox is checked.
-
-        :return: True if this checkbox is checked."""
-        return self._native_widget.GetValue()
-
-    @is_checked.setter
-    def is_checked(self, new_state): # type: (bool) -> None
-        """Marks this checkbox as either checked or unchecked, depending on the
-        value of new_state.
-
-        :param new_state: True if this checkbox should be checked, False if it
-                          should be unchecked."""
-        self._native_widget.SetValue(new_state)
 
 class DropDown(_AComponent):
     """Wraps a DropDown with automatic tooltip if text is wider than width of
