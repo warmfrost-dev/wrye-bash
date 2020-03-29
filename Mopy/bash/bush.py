@@ -187,7 +187,7 @@ def detect_and_set_game(cli_game_dir=u'', bash_ini_=None, name=None):
         return None, None
     # No match found, return the list of possible games (may be empty if
     # nothing is found in registry)
-    game_icons = {_fsName_display[g]: bass.dirs['images'].join(g + u'32.png').s
+    game_icons = {_fsName_display[g]: bass.dirs[u'images'].join(g + u'32.png').s
                   for g in foundGames}
     return game_icons.keys(), game_icons
 

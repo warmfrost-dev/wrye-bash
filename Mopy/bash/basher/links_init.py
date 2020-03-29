@@ -51,7 +51,7 @@ from .bsa_links import *
 def InitStatusBar():
     """Initialize status bar links."""
     def imageList(template):
-        return [Image(bass.dirs['images'].join(template % i)) for i in
+        return [Image(bass.dirs[u'images'].join(template % i)) for i in
                 (16, 24, 32)]
     def _init_tool_buttons(): # tooldirs must have been initialized
         return (((bass.tooldirs['OblivionBookCreatorPath'],
@@ -75,20 +75,20 @@ def InitStatusBar():
     BashStatusBar.buttons.append(AutoQuit_Button(uid=u'AutoQuit'))
     BashStatusBar.buttons.append( # Game
         Game_Button(
-            bass.dirs['app'].join(bush.game.launch_exe),
-            bass.dirs['app'].join(*bush.game.version_detect_file),
+            bass.dirs[u'app'].join(bush.game.launch_exe),
+            bass.dirs[u'app'].join(*bush.game.version_detect_file),
             imageList(u'%s%%s.png' % bush.game.fsName.lower()),
             u' '.join((_(u"Launch"),bush.game.displayName)),
             u' '.join((_(u"Launch"),bush.game.displayName,u'%(version)s'))))
     BashStatusBar.buttons.append( #TESCS/CreationKit
         TESCS_Button(
-            bass.dirs['app'].join(bush.game.Ck.exe),
+            bass.dirs[u'app'].join(bush.game.Ck.exe),
             imageList(bush.game.Ck.image_name),
-            u' '.join((_(u"Launch"),bush.game.Ck.ck_abbrev)),
-            u' '.join((_(u"Launch"),bush.game.Ck.ck_abbrev,u'%(version)s')),
+            u' '.join((_(u'Launch'), bush.game.Ck.ck_abbrev)),
+            u' '.join((_(u'Launch'), bush.game.Ck.ck_abbrev, u'%(version)s')),
             bush.game.Ck.se_args))
     BashStatusBar.buttons.append( #OBMM
-        app_button_factory(bass.dirs['app'].join(u'OblivionModManager.exe'),
+        app_button_factory(bass.dirs[u'app'].join(u'OblivionModManager.exe'),
                            imageList(u'obmm%s.png'), _(u"Launch OBMM"),
                            uid=u'OBMM'))
     from .constants import toolbar_buttons
@@ -181,8 +181,8 @@ def InitStatusBar():
     from .constants import misc_tools
     for mt in misc_tools: BashStatusBar.buttons.append(Tooldir_Button(*mt))
     #--Custom Apps
-    dirApps = bass.dirs['mopy'].join(u'Apps')
-    badIcons = [Image(bass.dirs['images'].join(u'error_cross_16.png'))] * 3
+    dirApps = bass.dirs[u'mopy'].join(u'Apps')
+    badIcons = [Image(bass.dirs[u'images'].join(u'error_cross_16.png'))] * 3
     def iconList(fileName):
         return [Image(fileName, Image.typesDict[u'ico'], x) for x in
                 (16, 24, 32)]

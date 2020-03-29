@@ -419,7 +419,7 @@ if bush.game.Esp.check_master_sizes:
 
 # Images ----------------------------------------------------------------------
 #------------------------------------------------------------------------------
-imDirJn = bass.dirs['images'].join
+imDirJn = bass.dirs[u'images'].join
 def _png(fname): return Image(imDirJn(fname))
 
 #--Image lists

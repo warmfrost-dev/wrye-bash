@@ -470,7 +470,7 @@ class CBash_ActorFactions(object):
     def readFromMod(self,modInfo):
         """Imports faction data from specified mod."""
         gotFactions, fid_eid = self.gotFactions, self.fid_eid
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             importFile = Current.addMod(modInfo.getPath().stail,Saveable=False)
             Current.load()
             for modFile in Current.LoadOrderMods:
@@ -491,7 +491,7 @@ class CBash_ActorFactions(object):
 
     def writeToMod(self,modInfo):
         """Exports faction data to specified mod."""
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = Counter() # {'CREA':0,'NPC_':0}
@@ -701,7 +701,7 @@ class CBash_ActorLevels(object):
     def readFromMod(self,modInfo):
         """Imports actor level data from the specified mod and its masters."""
         mod_fid_levels, gotLevels = self.mod_fid_levels, self.gotLevels
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             Current.addMod(u'Oblivion.esm', Saveable=False)
             Current.addMod(modInfo.getPath().stail, Saveable=False)
             Current.load()
@@ -719,7 +719,7 @@ class CBash_ActorLevels(object):
     def writeToMod(self,modInfo):
         """Exports actor levels to specified mod."""
         mod_fid_levels = self.mod_fid_levels
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = 0
@@ -967,7 +967,7 @@ class CBash_EditorIds(object):
     def readFromMod(self,modInfo):
         """Imports eids from specified mod."""
         group_fid_eid,groups = self.group_fid_eid,self.groups
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()
@@ -981,7 +981,7 @@ class CBash_EditorIds(object):
     def writeToMod(self,modInfo):
         """Exports eids to specified mod."""
         group_fid_eid = self.group_fid_eid
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = []
@@ -1216,7 +1216,7 @@ class CBash_FactionRelations(object):
         fid_faction_mod,fid_eid,gotFactions = self.fid_faction_mod,\
                                               self.fid_eid,self.gotFactions
         importFile = modInfo.getPath().tail
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             importFile = Current.addMod(importFile.s, Saveable=False)
             Current.load()
             for modFile in Current.LoadOrderMods:
@@ -1257,7 +1257,7 @@ class CBash_FactionRelations(object):
     def writeToMod(self,modInfo):
         """Exports faction relations to specified mod."""
         fid_faction_mod = self.fid_faction_mod
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = 0
@@ -1430,7 +1430,7 @@ class CBash_FidReplacer(object):
                        oldId[0] in existing and newId[0] in existing)
         if not old_new: return False
         # old_count = {} # unused - was meant to be used ?
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             for newId in set(old_new.values()):
                 Current.addMod(bosh.modInfos[newId[0]].getPath().stail,
                                Saveable=False)
@@ -1556,7 +1556,7 @@ class CBash_FullNames(object):
     def readFromMod(self,modInfo):
         """Imports type_id_name from specified mod."""
         group_fid_name = self.group_fid_name
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()
@@ -1573,7 +1573,7 @@ class CBash_FullNames(object):
     def writeToMod(self,modInfo):
         """Exports type_id_name to specified mod."""
         group_fid_name = self.group_fid_name
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = {}
@@ -1881,7 +1881,7 @@ class CBash_ItemStats(object):
 
     def readFromMod(self,modInfo):
         """Reads stats from specified mod."""
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             for group, attrs in self.class_attrs.iteritems():
@@ -1891,7 +1891,7 @@ class CBash_ItemStats(object):
 
     def writeToMod(self,modInfo):
         """Exports type_id_name to specified mod."""
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = Counter() #--changed[modName] = numChanged
@@ -2105,7 +2105,7 @@ class CBash_ScriptText(_ScriptText):
     def readFromMod(self, modInfo, file_):
         """Reads stats from specified mod."""
         eid_data = self.eid_data
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             with Progress(_(u'Export Scripts')) as progress:
@@ -2122,7 +2122,7 @@ class CBash_ScriptText(_ScriptText):
         eid_data = self.eid_data
         changed = []
         added = []
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             for record in modFile.SCPT:
@@ -2489,7 +2489,7 @@ class CBash_SigilStoneDetails(_UsesEffectsMixin):
     def readFromMod(self,modInfo):
         """Reads stats from specified mod."""
         fid_stats = self.fid_stats
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()
@@ -2504,7 +2504,7 @@ class CBash_SigilStoneDetails(_UsesEffectsMixin):
         """Writes stats to specified mod."""
         fid_stats = self.fid_stats
         changed = []
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             fid_stats = FormID.FilterValidDict(fid_stats,modFile,True,False)
@@ -2676,7 +2676,7 @@ class CBash_ItemPrices(_ItemPrices):
     def readFromMod(self,modInfo):
         """Reads data from specified mod."""
         class_fid_stats, attrs = self.class_fid_stats, self.item_prices_attrs
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             for group, fid_stats in class_fid_stats.iteritems():
@@ -2686,7 +2686,7 @@ class CBash_ItemPrices(_ItemPrices):
     def writeToMod(self,modInfo):
         """Writes stats to specified mod."""
         class_fid_stats = self.class_fid_stats
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = defaultdict(int) #--changed[modName] = numChanged
@@ -2973,7 +2973,7 @@ class CBash_SpellRecords(_UsesEffectsMixin):
     def readFromMod(self,modInfo):
         """Reads stats from specified mod."""
         fid_stats, attrs = self.fid_stats, self.attrs
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             for record in modFile.SPEL:
@@ -2982,7 +2982,7 @@ class CBash_SpellRecords(_UsesEffectsMixin):
     def writeToMod(self,modInfo):
         """Writes stats to specified mod."""
         fid_stats, attrs = self.fid_stats, self.attrs
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             changed = []
@@ -3239,7 +3239,7 @@ class CBash_IngredientDetails(_UsesEffectsMixin):
     def readFromMod(self,modInfo):
         """Reads stats from specified mod."""
         fid_stats = self.fid_stats
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()
@@ -3253,7 +3253,7 @@ class CBash_IngredientDetails(_UsesEffectsMixin):
         """Writes stats to specified mod."""
         fid_stats = self.fid_stats
         changed = []
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             fid_stats = FormID.FilterValidDict(fid_stats, modFile, True, False)
@@ -3385,7 +3385,7 @@ class CBash_MapMarkers(object):
         """Imports type_id_name from specified mod."""
         fid_markerdata,markerFid,attrs = self.fid_markerdata,self.markerFid,\
                                          self.attrs
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()
@@ -3400,7 +3400,7 @@ class CBash_MapMarkers(object):
         fid_markerdata,markerFid,attrs = self.fid_markerdata,self.markerFid,\
                                          self.attrs
         changed = []
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,LoadMasters=False)
             Current.load()
             fid_markerdata = FormID.FilterValidDict(fid_markerdata,modFile,
@@ -3491,7 +3491,7 @@ class CBash_CellBlockInfo(object):
     def readFromMod(self,modInfo):
         """Imports type_id_name from specified mod."""
         celldata = self.celldata
-        with ObCollection(ModsPath=dirs['mods'].s) as Current:
+        with ObCollection(ModsPath=dirs[u'mods'].s) as Current:
             modFile = Current.addMod(modInfo.getPath().stail,Saveable=False,
                                      LoadMasters=False)
             Current.load()

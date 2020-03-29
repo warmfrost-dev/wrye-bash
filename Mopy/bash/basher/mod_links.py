@@ -462,7 +462,7 @@ class _Mod_Groups_Export(ItemLink):
 
     def Execute(self):
         textName = u'My' + self.__class__.csvFile
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         textDir.makedirs()
         #--File dialog
         textPath = self._askSave(title=self.__class__.askTitle,
@@ -487,7 +487,7 @@ class _Mod_Groups_Import(ItemLink):
             u"mods the group they are assigned in the text file, if any.")
         if not self._askContinue(message, 'bash.groups.import.continue',
                                  _(u'Import Groups')): return
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         #--File dialog
         textPath = self._askOpen(_(u'Import names from:'),textDir,
             u'', u'*_Groups.csv',mustExist=True)
@@ -1199,7 +1199,7 @@ class Mod_ExportPatchConfig(_Mod_BP_Link):
                                              'bash.patch.configs', {})
         exportConfig(patch_name=self._selected_item.s, config=config,
                      isCBash=configIsCBash(config), win=self.window,
-                     outDir=bass.dirs['patches'])
+                     outDir=bass.dirs[u'patches'])
 
 # Cleaning submenu ------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -1732,7 +1732,7 @@ class Mod_Fids_Replace(OneItemLink):
     def Execute(self):
         if not self._askContinue(self.message, 'bash.formIds.replace.continue',
                                  _(u'Import Form IDs')): return
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         #--File dialog
         textPath = self._askOpen(_(u'Form ID mapper file:'),textDir,
             u'', u'*_Formids.csv',mustExist=True)
@@ -1804,7 +1804,7 @@ class _Import_Export_Link(AppendableLink):
 class _Mod_Export_Link(_Import_Export_Link, ItemLink):
     def Execute(self):
         textName = self.selected[0].root + self.__class__.csvFile
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         textDir.makedirs()
         #--File dialog
         textPath = self._askSave(title=self.__class__.askTitle,
@@ -1872,7 +1872,7 @@ class _Mod_Import_Link(_Import_Export_Link, OneItemLink):
         if not self._askContinueImport(): return
         supportedExts = self.__class__.supportedExts
         textName = self._selected_item.root + self.__class__.csvFile
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         #--File dialog
         textPath = self._askOpen(self.__class__.askTitle, textDir, textName,
                                  self._wildcard, mustExist=True)
@@ -2015,7 +2015,7 @@ class Mod_Scripts_Export(_Mod_Export_Link):
 
     def Execute(self): # overrides _Mod_Export_Link
         fileName, fileInfo = next(self.iselected_pairs()) # first selected pair
-        defaultPath = bass.dirs['patches'].join(fileName.s + u' Exported Scripts')
+        defaultPath = bass.dirs[u'patches'].join(fileName.s + u' Exported Scripts')
         def OnOk():
             dialog.accept_modal()
             bass.settings['bash.mods.export.deprefix'] = gdeprefix.text_content.strip()
@@ -2084,10 +2084,10 @@ class Mod_Scripts_Import(_Mod_Import_Link):
 
     def Execute(self):
         if not self._askContinueImport(): return
-        defaultPath = bass.dirs['patches'].join(
+        defaultPath = bass.dirs[u'patches'].join(
             self._selected_item.s + u' Exported Scripts')
         if not defaultPath.exists():
-            defaultPath = bass.dirs['patches']
+            defaultPath = bass.dirs[u'patches']
         textDir = self._askDirectory(
             message=_(u'Choose directory to import scripts from'),
             defaultPath=defaultPath)
@@ -2367,7 +2367,7 @@ class Mod_EditorIds_Import(_Mod_Import_Link):
     def Execute(self):
         if not self._askContinueImport(): return
         textName = self._selected_item.root + self.__class__.csvFile
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         #--File dialog
         textPath = self._askOpen(self.__class__.askTitle,textDir,
             textName, self._wildcard ,mustExist=True)
@@ -2490,7 +2490,7 @@ class CBash_Mod_MapMarkers_Import(_Mod_Import_Link, _CBash_Link):
     def Execute(self):
         if not self._askContinueImport(): return
         textName = self._selected_item.root + self.__class__.csvFile
-        textDir = bass.dirs['patches']
+        textDir = bass.dirs[u'patches']
         #--File dialog
         textPath = self._askOpen(self.__class__.askTitle,
             textDir, textName, u'*_MapMarkers.csv',mustExist=True)

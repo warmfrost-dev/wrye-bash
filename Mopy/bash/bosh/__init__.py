@@ -705,7 +705,7 @@ class ModInfo(FileInfo):
                             u'settings')
                 raise ModError(self.name, msg)
             for bsa, assets in bsa_assets.iteritems():
-                out_path = dirs['bsaCache'].join(bsa.name)
+                out_path = dirs[u'bsaCache'].join(bsa.name)
                 try:
                     bsa.extract_assets(assets, out_path.s)
                 except BSAError as e:
@@ -1524,7 +1524,7 @@ class INIInfos(TableFileInfos):
         INIInfos._default_tweaks = dict(
             (GPath(k), DefaultIniInfo(k, v)) for k, v in
             bush.game.default_tweaks.iteritems())
-        super(INIInfos, self).__init__(dirs['ini_tweaks'],
+        super(INIInfos, self).__init__(dirs[u'ini_tweaks'],
                                        factory=ini_info_factory)
         self._ini = None
         # Check the list of target INIs, remove any that don't exist
@@ -1663,7 +1663,7 @@ class INIInfos(TableFileInfos):
         return _added, _updated, _deleted, changed
 
     @property
-    def bash_dir(self): return dirs['modsBash'].join(u'INI Data')
+    def bash_dir(self): return dirs[u'modsBash'].join(u'INI Data')
 
     def delete_refresh(self, deleted_keys, paths_to_keys, check_existence,
                        _in_refresh=False):
@@ -1767,17 +1767,17 @@ class ModInfos(FileInfos):
         self.__class__.file_pattern = re.compile(u'(' + u'|'.join(
             map(re.escape, bush.game.espm_extensions)) + u'' r')(\.ghost)?$',
                                                  re.I | re.U)
-        FileInfos.__init__(self, dirs['mods'], factory=ModInfo)
+        FileInfos.__init__(self, dirs[u'mods'], factory=ModInfo)
         #--Info lists/sets
         self.mergeScanned = [] #--Files that have been scanned for mergeability.
         for fname in bush.game.masterFiles:
-            if dirs['mods'].join(fname).exists():
+            if dirs[u'mods'].join(fname).exists():
                 self.masterName = GPath(fname)
                 break
         else:
             if len(bush.game.masterFiles) == 1:
                 deprint(u'Missing master file; %s does not exist in an '
-                        u'unghosted state in %s' % (fname, dirs['mods'].s))
+                        u'unghosted state in %s' % (fname, dirs[u'mods'].s))
             else:
                 msg = bush.game.masterFiles[0]
                 if len(bush.game.masterFiles) > 2:
@@ -1785,7 +1785,7 @@ class ModInfos(FileInfos):
                 msg += u' or ' + bush.game.masterFiles[-1]
                 deprint(u'Missing master file; Neither %s exists in an '
                         u'unghosted state in %s. Presuming that %s is the '
-                        u'correct masterfile.' % (msg, dirs['mods'].s,
+                        u'correct masterfile.' % (msg, dirs[u'mods'].s,
                                                   bush.game.masterFiles[0]))
             self.masterName = GPath(bush.game.masterFiles[0])
         self.mergeable = set() #--Set of all mods which can be merged.
@@ -1965,7 +1965,7 @@ class ModInfos(FileInfos):
         return True
 
     @property
-    def bash_dir(self): return dirs['modsBash']
+    def bash_dir(self): return dirs[u'modsBash']
 
     #--Refresh-----------------------------------------------------------------
     def _names(self):
@@ -2776,7 +2776,7 @@ class ModInfos(FileInfos):
     # does not really belong here, but then where ?
         """Save current plugins into arcSaves directory, load plugins from
         newSaves directory and set oblivion version."""
-        arcPath, newPath = (dirs['saveBase'].join(saves) for saves in
+        arcPath, newPath = (dirs[u'saveBase'].join(saves) for saves in
                             (arcSaves, newSaves))
         load_order.swap(arcPath, newPath)
         # Swap Oblivion version to memorized version
@@ -2811,11 +2811,11 @@ class SaveInfos(FileInfos):
         self.__class__.file_pattern = re.compile(patt, re.I | re.U)
         self.localSave = bush.game.Ini.save_prefix
         self._setLocalSaveFromIni()
-        super(SaveInfos, self).__init__(dirs['saveBase'].join(self.localSave),
+        super(SaveInfos, self).__init__(dirs[u'saveBase'].join(self.localSave),
                                         factory=SaveInfo)
         # Save Profiles database
         self.profiles = bolt.DataTable(bolt.PickleDict(
-            dirs['saveBase'].join(u'BashProfiles.dat')))
+            dirs[u'saveBase'].join(u'BashProfiles.dat')))
         # save profiles used to have a trailing slash, remove it if present
         for row in self.profiles.keys():
             if row.endswith(u'\\'):
@@ -2909,7 +2909,7 @@ class SaveInfos(FileInfos):
         self._setLocalSaveFromIni()
         if localSave == self.localSave: return # no change
         self.table.save()
-        self._initDB(dirs['saveBase'].join(self.localSave))
+        self._initDB(dirs[u'saveBase'].join(self.localSave))
 
     def setLocalSave(self, localSave, refreshSaveInfos=True):
         """Sets SLocalSavePath in Oblivion.ini. The latter must exist."""
@@ -2919,7 +2919,7 @@ class SaveInfos(FileInfos):
         # the setting correctly, kept previous behavior
         oblivionIni.saveSetting(*bush.game.Ini.save_profiles_key,
                                 value=localSave + u'\\')
-        self._initDB(dirs['saveBase'].join(self.localSave))
+        self._initDB(dirs[u'saveBase'].join(self.localSave))
         if refreshSaveInfos: self.refresh()
 
     #--Enabled ----------------------------------------------------------------
@@ -2987,7 +2987,7 @@ class BSAInfos(FileInfos):
                     if self._file_mod_time != self._default_mtime:
                         self.setmtime(self._default_mtime)
 
-        super(BSAInfos, self).__init__(dirs['mods'], factory=BSAInfo)
+        super(BSAInfos, self).__init__(dirs[u'mods'], factory=BSAInfo)
 
     def new_info(self, fileName, _in_refresh=False, owner=None,
                  notify_bain=False):
@@ -3000,14 +3000,14 @@ class BSAInfos(FileInfos):
         return new_bsa
 
     @property
-    def bash_dir(self): return dirs['modsBash'].join(u'BSA Data')
+    def bash_dir(self): return dirs[u'modsBash'].join(u'BSA Data')
 
     @staticmethod
     def remove_invalidation_file():
         """Removes ArchiveInvalidation.txt, if it exists in the game folder.
         This is used when disabling other solutions to the Archive Invalidation
         problem prior to enabling WB's BSA Redirection."""
-        dirs['app'].join(u'ArchiveInvalidation.txt').remove()
+        dirs[u'app'].join(u'ArchiveInvalidation.txt').remove()
 
     @staticmethod
     def reset_oblivion_mtimes():
@@ -3025,13 +3025,13 @@ class BSAInfos(FileInfos):
                      (1138660560, u'Oblivion - Sounds.bsa'),
                      (1139433736, u'Oblivion - Misc.bsa'))
         for mtime, bsa_file in bsa_times:
-            dirs['mods'].join(bsa_file).mtime = mtime
+            dirs[u'mods'].join(bsa_file).mtime = mtime
 
 #------------------------------------------------------------------------------
 class PeopleData(DataStore):
     """Data for a People UIList. Built on a PickleDict."""
     def __init__(self):
-        self.dictFile = bolt.PickleDict(dirs['saveBase'].join(u'People.dat'))
+        self.dictFile = bolt.PickleDict(dirs[u'saveBase'].join(u'People.dat'))
         self.data = self.dictFile.data
         self.hasChanged = False ##: move to bolt.PickleDict
         self.loaded = False
@@ -3097,7 +3097,7 @@ class ScreenInfos(FileInfos):
     _bain_notify = False # BAIN can't install to game dir
 
     def __init__(self):
-        self._orig_store_dir = dirs['app'] # type: bolt.Path
+        self._orig_store_dir = dirs[u'app'] # type: bolt.Path
         self.__class__.file_pattern = re.compile(
             r'\.(' + u'|'.join(ext[1:] for ext in imageExts) + u')$',
             re.I | re.U)
@@ -3114,7 +3114,7 @@ class ScreenInfos(FileInfos):
         return super(ScreenInfos, self).refresh(refresh_infos, booting)
 
     @property
-    def bash_dir(self): return dirs['modsBash'].join(u'Screenshot Data')
+    def bash_dir(self): return dirs[u'modsBash'].join(u'Screenshot Data')
 
 #------------------------------------------------------------------------------
 from . import converters
@@ -3142,8 +3142,8 @@ def initDefaultTools():
 
     # BOSS can be in any number of places.
     # Detect locally installed (into game folder) BOSS
-    if dirs['app'].join(u'BOSS', u'BOSS.exe').exists():
-        tooldirs['boss'] = dirs['app'].join(u'BOSS').join(u'BOSS.exe')
+    if dirs[u'app'].join(u'BOSS', u'BOSS.exe').exists():
+        tooldirs['boss'] = dirs[u'app'].join(u'BOSS').join(u'BOSS.exe')
     else:
         tooldirs['boss'] = GPath(u'C:\\**DNE**')
         # Detect globally installed (into Program Files) BOSS
@@ -3154,18 +3154,18 @@ def initDefaultTools():
                 path_in_registry = path_in_registry.join(u'BOSS.exe')
             tooldirs['boss'] = path_in_registry
 
-    tooldirs['Tes4FilesPath'] = dirs['app'].join(u'Tools', u'TES4Files.exe')
-    tooldirs['Tes4EditPath'] = dirs['app'].join(u'TES4Edit.exe')
-    tooldirs['Tes5EditPath'] = dirs['app'].join(u'TES5Edit.exe')
-    tooldirs['EnderalEditPath'] = dirs['app'].join(u'EnderalEdit.exe')
-    tooldirs['SSEEditPath'] = dirs['app'].join(u'SSEEdit.exe')
-    tooldirs['Fo4EditPath'] = dirs['app'].join(u'FO4Edit.exe')
-    tooldirs['Fo3EditPath'] = dirs['app'].join(u'FO3Edit.exe')
-    tooldirs['FnvEditPath'] = dirs['app'].join(u'FNVEdit.exe')
-    tooldirs['Tes4LodGenPath'] = dirs['app'].join(u'TES4LodGen.exe')
-    tooldirs['Tes4GeckoPath'] = dirs['app'].join(u'Tes4Gecko.jar')
+    tooldirs['Tes4FilesPath'] = dirs[u'app'].join(u'Tools', u'TES4Files.exe')
+    tooldirs['Tes4EditPath'] = dirs[u'app'].join(u'TES4Edit.exe')
+    tooldirs['Tes5EditPath'] = dirs[u'app'].join(u'TES5Edit.exe')
+    tooldirs['EnderalEditPath'] = dirs[u'app'].join(u'EnderalEdit.exe')
+    tooldirs['SSEEditPath'] = dirs[u'app'].join(u'SSEEdit.exe')
+    tooldirs['Fo4EditPath'] = dirs[u'app'].join(u'FO4Edit.exe')
+    tooldirs['Fo3EditPath'] = dirs[u'app'].join(u'FO3Edit.exe')
+    tooldirs['FnvEditPath'] = dirs[u'app'].join(u'FNVEdit.exe')
+    tooldirs['Tes4LodGenPath'] = dirs[u'app'].join(u'TES4LodGen.exe')
+    tooldirs['Tes4GeckoPath'] = dirs[u'app'].join(u'Tes4Gecko.jar')
     tooldirs['Tes5GeckoPath'] = pathlist(u'Dark Creations',u'TESVGecko',u'TESVGecko.exe')
-    tooldirs['OblivionBookCreatorPath'] = dirs['mods'].join(u'OblivionBookCreator.jar')
+    tooldirs['OblivionBookCreatorPath'] = dirs[u'mods'].join(u'OblivionBookCreator.jar')
     tooldirs['NifskopePath'] = pathlist(u'NifTools',u'NifSkope',u'Nifskope.exe')
     tooldirs['BlenderPath'] = pathlist(u'Blender Foundation',u'Blender',u'blender.exe')
     tooldirs['GmaxPath'] = GPath(u'C:\\GMAX').join(u'gmax.exe')
@@ -3173,10 +3173,10 @@ def initDefaultTools():
     tooldirs['MayaPath'] = undefinedPath
     tooldirs['PhotoshopPath'] = pathlist(u'Adobe',u'Adobe Photoshop CS3',u'Photoshop.exe')
     tooldirs['GIMP'] = pathlist(u'GIMP-2.0',u'bin',u'gimp-2.6.exe')
-    tooldirs['ISOBL'] = dirs['app'].join(u'ISOBL.exe')
-    tooldirs['ISRMG'] = dirs['app'].join(u'Insanitys ReadMe Generator.exe')
-    tooldirs['ISRNG'] = dirs['app'].join(u'Random Name Generator.exe')
-    tooldirs['ISRNPCG'] = dirs['app'].join(u'Random NPC.exe')
+    tooldirs['ISOBL'] = dirs[u'app'].join(u'ISOBL.exe')
+    tooldirs['ISRMG'] = dirs[u'app'].join(u'Insanitys ReadMe Generator.exe')
+    tooldirs['ISRNG'] = dirs[u'app'].join(u'Random Name Generator.exe')
+    tooldirs['ISRNPCG'] = dirs[u'app'].join(u'Random NPC.exe')
     tooldirs['NPP'] = pathlist(u'Notepad++',u'notepad++.exe')
     tooldirs['Fraps'] = GPath(u'C:\\Fraps').join(u'Fraps.exe')
     tooldirs['Audacity'] = pathlist(u'Audacity',u'Audacity.exe')
@@ -3186,8 +3186,8 @@ def initDefaultTools():
     tooldirs['Milkshape3D'] = pathlist(u'MilkShape 3D 1.8.4',u'ms3d.exe')
     tooldirs['Wings3D'] = pathlist(u'wings3d_1.2',u'Wings3D.exe')
     tooldirs['BSACMD'] = pathlist(u'BSACommander',u'bsacmd.exe')
-    tooldirs['MAP'] = dirs['app'].join(u'Modding Tools', u'Interactive Map of Cyrodiil and Shivering Isles 3.52', u'Mapa v 3.52.exe')
-    tooldirs['OBMLG'] = dirs['app'].join(u'Modding Tools', u'Oblivion Mod List Generator', u'Oblivion Mod List Generator.exe')
+    tooldirs['MAP'] = dirs[u'app'].join(u'Modding Tools', u'Interactive Map of Cyrodiil and Shivering Isles 3.52', u'Mapa v 3.52.exe')
+    tooldirs['OBMLG'] = dirs[u'app'].join(u'Modding Tools', u'Oblivion Mod List Generator', u'Oblivion Mod List Generator.exe')
     tooldirs['OBFEL'] = pathlist(u'Oblivion Face Exchange Lite',u'OblivionFaceExchangeLite.exe')
     tooldirs['ArtOfIllusion'] = pathlist(u'ArtOfIllusion',u'Art of Illusion.exe')
     tooldirs['ABCAmberAudioConverter'] = pathlist(u'ABC Amber Audio Converter',u'abcaudio.exe')
@@ -3219,7 +3219,7 @@ def initDefaultTools():
     tooldirs['EggTranslator'] = pathlist(u'Egg Translator',u'EggTranslator.exe')
     tooldirs['Sculptris'] = pathlist(u'sculptris',u'Sculptris.exe')
     tooldirs['Mudbox'] = pathlist(u'Autodesk',u'Mudbox2011',u'mudbox.exe')
-    tooldirs['Tabula'] = dirs['app'].join(u'Modding Tools', u'Tabula', u'Tabula.exe')
+    tooldirs['Tabula'] = dirs[u'app'].join(u'Modding Tools', u'Tabula', u'Tabula.exe')
     tooldirs['MyPaint'] = pathlist(u'MyPaint',u'mypaint.exe')
     tooldirs['Pixia'] = pathlist(u'Pixia',u'pixia.exe')
     tooldirs['DeepPaint'] = pathlist(u'Right Hemisphere',u'Deep Paint',u'DeepPaint.exe')
@@ -3287,7 +3287,7 @@ def initOptions(bashIni):
                     if value == u'.': continue
                     value = GPath(value)
                     if not value.isabs():
-                        value = dirs['app'].join(value)
+                        value = dirs[u'app'].join(value)
                 elif settingType is bool:
                     if value == u'.': continue
                     value = bashIni.getboolean(section,key)
@@ -3318,15 +3318,15 @@ def initBosh(bashIni, game_ini_path):
     global oblivionIni, gameInis
     oblivionIni = GameIni(game_ini_path, 'cp1252')
     gameInis = [oblivionIni]
-    gameInis.extend(IniFile(dirs['saveBase'].join(x), 'cp1252') for x in
+    gameInis.extend(IniFile(dirs[u'saveBase'].join(x), 'cp1252') for x in
                     bush.game.iniFiles[1:])
     load_order.initialize_load_order_files()
     initOptions(bashIni)
     from .bain import Installer
     Installer.init_bain_dirs()
     if os.name == u'nt': # don't add local directory to binaries on linux
-        archives.exe7z = dirs['compiled'].join(archives.exe7z).s
-        archives.pngcrush = dirs['compiled'].join(archives.pngcrush).s
+        archives.exe7z = dirs[u'compiled'].join(archives.exe7z).s
+        archives.pngcrush = dirs[u'compiled'].join(archives.pngcrush).s
 
 def initSettings(readOnly=False, _dat=u'BashSettings.dat',
                  _bak=u'BashSettings.dat.bak'):
@@ -3335,10 +3335,10 @@ def initSettings(readOnly=False, _dat=u'BashSettings.dat',
     def _load(dat_file=_dat):
     # bolt.PickleDict.load() handles EOFError, ValueError falling back to bak
         return bolt.Settings( # calls PickleDict.load() and copies loaded data
-            bolt.PickleDict(dirs['saveBase'].join(dat_file), readOnly))
+            bolt.PickleDict(dirs[u'saveBase'].join(dat_file), readOnly))
 
-    _dat = dirs['saveBase'].join(_dat)
-    _bak = dirs['saveBase'].join(_bak)
+    _dat = dirs[u'saveBase'].join(_dat)
+    _bak = dirs[u'saveBase'].join(_bak)
     def _loadBakOrEmpty(delBackup=False, ignoreBackup=False):
         _dat.remove()
         if delBackup: _bak.remove()
