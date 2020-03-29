@@ -109,7 +109,7 @@ class DocBrowser(WindowFrame):
             btn.enabled = False
 
     @staticmethod
-    def _get_is_wtxt(doc_path=None):
+    def _get_is_wtxt(doc_path):
         """Determines whether specified path is a wtxt file."""
         rx = re.compile(u'' r'^=.+=#\s*$', re.U)
         try:
@@ -207,8 +207,9 @@ class DocBrowser(WindowFrame):
             bolt.WryeText.genHtml(doc_path, None,
                                   bosh.modInfos.store_dir.join(u'Docs'))
 
-    def _load_data(self, doc_path=None, uni_str=None, editing=False):
-        if doc_path and doc_path.cext in (u'.htm', u'.html', u'.mht') and not editing \
+    def _load_data(self, doc_path=None, uni_str=None, editing=False,
+                   __html_extensions=frozenset((u'.htm', u'.html', u'.mht'))):
+        if doc_path and doc_path.cext in __html_extensions and not editing \
                 and web_viewer_available():
             self._doc_ctrl.try_load_html(doc_path)
         else:
