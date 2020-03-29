@@ -384,7 +384,7 @@ class App_Tes4View(_ExeButton):
 
     def IsPresent(self): # FIXME(inf) What on earth is this? What's the point??
         if self.exePath in bosh.undefinedPaths or not self.exePath.exists():
-            testPath = bass.tooldirs['Tes4ViewPath']
+            testPath = bass.tooldirs[u'Tes4ViewPath']
             if testPath not in bosh.undefinedPaths and testPath.exists():
                 self.exePath = testPath
                 return True
@@ -443,7 +443,7 @@ class App_BOSS(_ExeButton):
             extraArgs.append(u'-s',) # Silent Mode - BOSS version 1.6+
         if balt.getKeyState(67): #c - print crc calculations in BOSS log.
             extraArgs.append(u'-c',)
-        if bass.tooldirs['boss'].version >= (2, 0, 0, 0):
+        if bass.tooldirs[u'boss'].version >= (2, 0, 0, 0):
             # After version 2.0, need to pass in the -g argument
             extraArgs.append(u'-g%s' % bush.game.fsName,)
         self.extraArgs = tuple(extraArgs)
