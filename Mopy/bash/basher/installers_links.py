@@ -243,12 +243,14 @@ class Installers_UninstallAllUnknownFiles(Installers_Link):
     _text = _(u'Clean Data')
     _help = _(u'This will remove all mod files that are not linked to an'
              u' active installer out of the Data folder.')
-    fullMessage = _(u"Clean Data directory?") + u"  " + _help + u"  " + _(
+    fullMessage = _(u'Clean Data directory?') + u'  ' + _help + u'  ' + _(
         u'This includes files that were installed manually or by another '
         u'program.  Files will be moved to the "%s" directory instead of '
         u'being deleted so you can retrieve them later if necessary.  '
         u'Note that if you use TES4LODGen, this will also clean out the '
         u'DistantLOD folder, so on completion please run TES4LodGen again.'
+        u'\n\nClick Yes to see a list of files before they are moved. '
+        u'No to cancel.'
         ) % bass.dirs['bainData'].join(u'Data Folder Contents <date>')
 
     @balt.conversation
@@ -256,8 +258,29 @@ class Installers_UninstallAllUnknownFiles(Installers_Link):
         if not self._askYes(self.fullMessage): return
         ui_refresh = [False, False]
         try:
-            with balt.Progress(_(u"Cleaning Data Files..."),u'\n' + u' ' * 65):
-                self.idata.clean_data_dir(ui_refresh)
+            all_unknown_files = self.idata.get_clean_data_dir_list()
+            if not all_unknown_files:
+                self._showOk(
+                    _(u'There are no untracked files in the Data folder.'),
+                    _(u'Data folder is clean'))
+                return
+            message = [u'',       # adding a tool tip
+                       _(u'Uncheck files to keep them in the Data folder.')]
+            all_unknown_files.sort()
+            message.extend(all_unknown_files)
+            selected_unknown_files = []
+            with ListBoxes(self.window,
+                  _(u'Move files out of the Data folder.'),
+                  _(u'Uncheck any files you want to keep in the Data folder.'),
+                  [message]) as dialog:
+                if dialog.show_modal():
+                    selected_unknown_files = dialog.getChecked(message[0],
+                                                            all_unknown_files)
+            if selected_unknown_files:
+                with balt.Progress(_(u'Cleaning Data Files...'),
+                                   u'\n' + u' ' * 65):
+                    self.idata.clean_data_dir(selected_unknown_files,
+                                              ui_refresh)
         finally:
             self.iPanel.RefreshUIMods(*ui_refresh)
 
