@@ -68,7 +68,7 @@ from ..skyrim.records import MreGmst # used in basher.app_buttons.App_GenPickle#
 #------------------------------------------------------------------------------
 class MreTes4(MreHeaderBase):
     """TES4 Record.  File header."""
-    classType = 'TES4'
+    classType = b'TES4'
 
     melSet = MelSet(
         MelStruct('HEDR', 'f2I', ('version', 1.0), 'numRecords',
@@ -91,7 +91,7 @@ class MreTes4(MreHeaderBase):
 #------------------------------------------------------------------------------
 class MreLvli(MreLeveledList):
     """Leveled Item."""
-    classType = 'LVLI'
+    classType = b'LVLI'
 
     top_copy_attrs = ('chanceNone','maxCount','glob','filterKeywordChances',
                  'epicLootChance','overrideName')
@@ -116,7 +116,7 @@ class MreLvli(MreLeveledList):
 #------------------------------------------------------------------------------
 class MreLvln(MreLeveledList):
     """Leveled NPC."""
-    classType = 'LVLN'
+    classType = b'LVLN'
 
     top_copy_attrs = ('chanceNone','maxCount','glob','filterKeywordChances',
                  'model','modt_p')

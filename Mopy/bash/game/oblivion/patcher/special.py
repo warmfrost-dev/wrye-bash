@@ -96,6 +96,8 @@ class AlchemicalCatalogs(_AAlchemicalCatalogs,Patcher):
         mapper = modFile.getLongMapper()
         for record in modFile.INGR.getActiveRecords():
             if not record.full: continue #--Ingredient must have name!
+            if record.obme_record_version is not None:
+                continue # Skip OBME records, at least for now
             effects = record.getEffects()
             if not ('SEFF',0) in effects:
                 id_ingred[mapper(record.fid)] = (
@@ -600,7 +602,7 @@ class MFactMarker(_AMFactMarker,ListPatcher):
             # mFactLong
             if mFactLong not in [relation.faction for relation in
                                  record.relations]:
-                record.flags.hiddenFromPC = False
+                record.general_flags.hidden_from_pc = False
                 relation = record.getDefault('relations')
                 relation.faction = mFactLong
                 relation.mod = 10
@@ -610,11 +612,12 @@ class MFactMarker(_AMFactMarker,ListPatcher):
                 if not record.ranks:
                     record.ranks = [record.getDefault('ranks')]
                 for rank in record.ranks:
-                    if not rank.male: rank.male = rankName
-                    if not rank.female: rank.female = rank.male
-                    if not rank.insigniaPath:
-                        rank.insigniaPath = \
-                            u'Menus\\Stats\\Cobl\\generic%02d.dds' % rank.rank
+                    if not rank.male_title: rank.male_title = rankName
+                    if not rank.female_title: rank.female_title = rankName
+                    if not rank.insignia_path:
+                        rank.insignia_path = (
+                                u'Menus\\Stats\\Cobl\\generic%02d.dds' %
+                                rank.rank_level)
                 keep(record.fid)
                 changed[record.fid[0]] += 1
         #--MFact record
