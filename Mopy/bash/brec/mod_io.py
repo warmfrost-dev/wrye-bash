@@ -108,12 +108,19 @@ class RecHeader(RecordHeader):
         return struct_pack(*pack_args)
 
     def __repr__(self):
-        return u'<Record Header: %s v%u>' % (
-            strFid(self.fid), self.form_version)
+        return u'<Record Header: [%s:%s] v%u>' % (
+            self.recType, strFid(self.fid), self.form_version)
 
 class GrupHeader(RecordHeader):
     """Fixed size structure serving as a fencepost in the plugin file,
     signaling a block of same type records ahead."""
+    # For __repr__ info only
+    _debug_info = {0: u'Top', 1: u'World Children', 2: u'Interior Cell Block',
+                   3: u'Interior Cell Sub-Block', 4: u'Exterior Cell Block',
+                   5: u'Exterior Cell Sub-Block', 6: u'Cell Children',
+                   7: u'Topic Children', 8: u'Cell Persistent Childen',
+                   9: u'Cell Temporary Children',
+                   10: u'Cell Visible Distant Children/Quest Children'}
     __slots__ = (u'label', u'groupType', u'stamp')
 
     def __init__(self, size=0, arg1=0, arg2=0, arg3=0, arg4=0):
@@ -148,7 +155,8 @@ class GrupHeader(RecordHeader):
         return struct_pack(*pack_args)
 
     def __repr__(self):
-        return u'<GRUP Header: %s v%u>' % (self.label, self.form_version)
+        return u'<GRUP Header: %s, %s>' % (
+            self._debug_info[self.groupType], self.label)
 
 class TopGrupHeader(GrupHeader):
     """Fixed size header structure of the top groups."""
