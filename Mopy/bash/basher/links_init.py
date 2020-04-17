@@ -269,7 +269,6 @@ def InitInstallerLinks():
         file_menu.links.append(Installer_Rename())
         file_menu.links.append(Installer_Duplicate())
         file_menu.links.append(Installer_Hide())
-        file_menu.links.append(File_Redate())
         file_menu.links.append(balt.UIList_Delete())
         InstallersList.itemMenu.append(file_menu)
     if True: #--Open At...
@@ -390,7 +389,7 @@ def InitModLinks():
         ModList.mainMenu.append(files_menu)
     ModList.mainMenu.append(SeparatorLink())
     if True: #--Load
-        loadMenu = MenuLink(_(u'Load Order'))
+        loadMenu = MenuLink(_(u'Active Mods'))
         loadMenu.links.append(Mods_LoadList())
         ModList.mainMenu.append(loadMenu)
     ModList.mainMenu.append(SeparatorLink())
@@ -472,11 +471,9 @@ def InitModLinks():
             if CBashApi.Enabled:
                 exportMenu.links.append(CBash_Mod_CellBlockInfo_Export())
             exportMenu.links.append(Mod_EditorIds_Export())
-            ## exportMenu.links.append(Mod_ItemData_Export())
             if bush.game.fsName in (u'Enderal', u'Skyrim'):
                 exportMenu.links.append(Mod_FullNames_Export())
                 exportMenu.links.append(Mod_Prices_Export())
-                exportMenu.links.append(Mod_Stats_Export())
             elif bush.game.fsName == u'FalloutNV':
                 # exportMenu.links.append(Mod_Factions_Export())
                 exportMenu.links.append(Mod_FullNames_Export())
@@ -507,11 +504,9 @@ def InitModLinks():
         if True: #--Import
             importMenu = MenuLink(_(u"Import"))
             importMenu.links.append(Mod_EditorIds_Import())
-            ## importMenu.links.append(Mod_ItemData_Import())
             if bush.game.fsName in (u'Enderal', u'Skyrim'):
                 importMenu.links.append(Mod_FullNames_Import())
                 importMenu.links.append(Mod_Prices_Import())
-                importMenu.links.append(Mod_Stats_Import())
             elif bush.game.fsName == u'FalloutNV':
                 importMenu.links.append(Mod_FullNames_Import())
                 importMenu.links.append(Mod_Prices_Import())
@@ -549,12 +544,9 @@ def InitModLinks():
             cleanMenu.links.append(SeparatorLink())
             cleanMenu.links.append(Mod_ScanDirty())
             cleanMenu.links.append(Mod_RemoveWorldOrphans())
-            cleanMenu.links.append(Mod_FogFixer())
-            cleanMenu.links.append(Mod_UndeleteRefs())
+            if bush.game.fsName == u'Oblivion':
+                cleanMenu.links.append(Mod_FogFixer())
             ModList.itemMenu.append(cleanMenu)
-        # Disabled since it's dangerous - it doesn't update FormIDs, breaking
-        # every record in the file.
-        # ModList.itemMenu.append(Mod_AddMaster())
         ModList.itemMenu.append(Mod_CopyToEsmp())
         if bush.game.fsName == u'Oblivion':
             ModList.itemMenu.append(Mod_DecompileAll())
@@ -566,10 +558,6 @@ def InitModLinks():
             ModList.itemMenu.append(Mod_CreateDummyMasters())
         if bush.game.fsName == u'Oblivion':
             ModList.itemMenu.append(Mod_SetVersion())
-#    if bosh.inisettings['showadvanced'] == 1:
-#        advmenu = MenuLink(_(u"Advanced Scripts"))
-#        advmenu.links.append(Mod_DiffScripts())
-        #advmenu.links.append(())
 
 #------------------------------------------------------------------------------
 def InitSaveLinks():

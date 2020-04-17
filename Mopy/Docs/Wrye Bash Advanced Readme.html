@@ -509,9 +509,11 @@ tab. The directories skipped are:
             <tr><td id="bainUnhide">Unhide...</td><td>Opens a dialogue window
                 allowing you to select which hidden packages to unhide. Projects are not
                 supported yet.</td></tr>
-            <tr><td id="bainCreateNewProject">Create New Project...</td><td>Displays a
-                dialog that allows you to create a new project and select some starting
-                files for it.</td></tr>
+            <tr>
+                <td id="bainNewProject">New Project...</td>
+                <td>Displays a dialog that allows you to create a new project
+                    and select some starting files for it.</td>
+            </tr>
         <tr><td colspan="2" id="bainRefreshData">Refresh Data<td>Re-scans the Data directory (and all packages). Scanning of the Data directory is done once per run of Wrye Bash, when the
             Installers tab is first opened. If you manually alter files in the Data directory after that, <em>you had to run this command to update BAIN to reflect the changes</em>. However
             BAIN will now scan the Data directory for changes in files corresponding to the package(s) you run <a href="#bainQuickRefresh">Quick Refresh</a> (or
@@ -623,7 +625,7 @@ tab. The directories skipped are:
     </thead>
     <tbody>
         <tr>
-            <td colspan="2" rowspan="6" id="bainFileMenu">File...</td>
+            <td colspan="2" rowspan="5" id="bainFileMenu">File...</td>
             <td id="bainOpenFile">Open...</td>
             <td>Opens the selected package(s) in the file system.</td>
         </tr>
@@ -641,14 +643,9 @@ tab. The directories skipped are:
                 <code>[Game] Mods/Bash Mod Data/Hidden</code> folder.</td>
         </tr>
         <tr>
-            <td id="bainRedate">Redate...</td>
-            <td>Change the modification time of the selected package. If more than one package is selected, then all the packages
-                will have their modification times altered, with the first in the list being set to the specified time and the
-                rest at one minute intervals from that time.</td></tr>
-        <tr>
             <td id="bainDelete">Delete</td>
-            <td>Deletes the selected package(s). Deleted packages are
-                <strong>not</strong> sent to the Recycling Bin, they are permanently deleted.</td>
+            <td>Deletes the selected package(s). Deleted packages are sent to
+                the Recycling Bin.</td>
         </tr>
         <tr>
             <td colspan="2" rowspan="4" id="bainOpenAt">Open at</td>
@@ -950,7 +947,7 @@ tab. The directories skipped are:
                 <tr><td>New Bashed Patch...</td><td>Creates a new Bashed Patch plugin. Useful if you accidentally delete your current one or wish to have more than one.</td></tr>
                 <tr><td>New Mod...</td><td>Creates an empty plugin.</td></tr>
                 <tr><td>New Mod (masterless)...</td><td>Creates an empty plugin with no masters.</td></tr>
-            <tr><td rowspan="6">Load Order</td>
+            <tr><td rowspan="6">Active Mods</td>
                 <td id="modsLoadAll">Activate All</td><td>Activates all the plugins in the mod list. If more than 255 mods are
                     present Bash will activate all it can from the bashed patches, then non mergeable and then mergeable mods then will display an
                     error message. Bash will try to activate mods in their load order.</td></tr>
@@ -1006,7 +1003,12 @@ tab. The directories skipped are:
                 <tr><td>Redate...</td><td>Change the modification time of the selected plugin. If more than one plugin is selected, then all the plugins will
                     have their modification times altered, with the first in the list being set to the specified time and the rest at one minute intervals
                     from that time.</td></tr>
-                <tr><td>Delete</td><td><strong>Permanently</strong> deletes the selected plugin, and any backups of it, but not snapshots.</td></tr>
+                <tr>
+                    <td>Delete</td>
+                    <td>Deletes the selected plugin(s) and any backups of them,
+                        but not snapshots. Deleted plugins are sent to the
+                        Recycling Bin.</td>
+                </tr>
                 <tr><td id="modsBackup">Backup</td><td>Creates a backup of the selected plugin in <code>[Game] Mods\Bash Mod Data\Backups</code>.
                     On first run, the backed-up plugin has <code>f</code> appended to its file extension, giving e.g. <code>.espf</code>.</td></tr>
                 <tr><td>Revert To Backup...</td><td>Reverts the selected plugin to the last backup made of it.</td></tr>
@@ -1150,19 +1152,21 @@ tab. The directories skipped are:
                 </ol>
                 <p>If you've completely swapped from one base plugin to another, you may wish to remove the old dependency. This can be done using TES4Edit's <q>Clean Masters</q> command or TES4Gecko's <q>Edit Master List</q> command. The former only removes totally unused masters while the latter can remove used masters with the appropriate cleanup, and is not an automated procedure.</p>
                 <strong>Note:</strong> You can also use TES4Edit to change the Form IDs using its <q>Batch Change Referencing Records</q> command together with the CSV file created. TES4Edit will also change the definition of a Form ID, rather than just any references to it, unlike Wrye Bash.
-            <tr><td rowspan="6">Mod Cleaning<td>Don't check against BOSS's dirty mod list<td>Overrides the setting in the column header context menu for the specific plugin(s) selected.
+            <tr><td rowspan="6">Mod Cleaning<td>Don't check against LOOT's dirty mod list<td>Overrides the setting in the column header context menu for the specific plugin(s) selected.
             <tr><td id="modsScanForDirtyEdits">Scan for Dirty Edits<td><em>Oblivion only.</em> Scans the selected plugin for Identical To Master records and deleted references, outputting counts of the dirty edits found. The dirty edit counts may differ from the output provided by TES4Edit as that includes other "junk" records in the <abbr title="Identical To Master record">ITM</abbr> count. Wrye Bash does not count these junk records as they are non-harmful.
             <tr><td>Scan for <abbr title="Undeleted and Disabled Reference">UDR</abbr>'s</td><td><em>All but Oblivion.</em> Behaves as the above <a href="#modsScanForDirtyEdits">Scan for Dirty Edits</a>, but only for deleted references.</td></tr>
             <tr><td id="modsRemoveWorldOrphans">Remove World Orphans<td>Some plugins have a mild form of corruption where exterior cells of new worldspaces in an esp master of the plugin are included in the plugin even if they are not edited, but the parent worldspace is not included, creating "orphaned" cells. This command removes these "orphans".
-            <tr><td id="modsNvidiaFogFix">Nvidia Fog Fix<td>Systems with Nvidia graphics cards can suffer a black screen bug when interior cell fog distances are set to 0. This command scans the selected plugin(s) and sets any zero-valued fog distances to 0.001.<br><br><strong>It is advised that mod authors use this on their mods before release.</strong>
-            <tr><td id="modsUndeleteRefs">Undelete Refs<td><strong>This is an experimental feature for advanced mod authors. If you're trying to undelete references, you should probably use TES4Edit instead.</strong> Deleted references can cause crashes. This command undeletes references and disables them instead. However, the undeleted reference does not contain the missing data caused by deletion. TES4Edit can add this data back in.
-            <tr><td colspan="2">Add Master...<td><strong>Note: Currently Disabled.</strong> Adds specified master to the list of masters for the selected plugin, thus ceding ownership of new content
-                of this mod to the new master. Useful for splitting mods into esm/esp pairs.<br><br><strong>Warning:</strong> For advanced mod authors only.
-                You should only use this if you know exactly what you're doing: adding a master through Bash does not update record FormIDs,
-                so new content added by the mod will now seem added by the mod's new master (the "cedes ownership" part above) - resulting in
-                the mod marked as mergeable - info from Arthmoor and Lojack here: <a href="https://web.archive.org/web/20190307225455/https://forums.bethsoft.com/topic/1536340-wrye-bash-thread-105/page-3#entry24345148">Wrye Bash - Thread #105, post #80</a>
-                see previous posts for the confusion that this might cause. As Lojack points out if you're doing that sort of low level adding of masters,
-                you should be using xEdit.
+            <tr>
+                <td id="modsNvidiaFogFix">Nvidia Fog Fix</td>
+                <td><em>Oblivion only.</em> Systems with Nvidia graphics cards
+                    can suffer a black screen bug when interior cell fog
+                    distances are set to 0. This command scans the selected
+                    plugin(s) and sets any zero-valued fog distances to 0.001.
+                    <br><br><strong>It is advised that mod authors use this on
+                        their mods before release.</strong></td>
+            </tr>
+            <tr><td id="modsUndeleteRefs">Undelete Refs<td><strong>Removed.</strong> Use xEdit for cleaning.</td></tr>
+            <tr><td colspan="2">Add Master...<td><strong>Removed.</strong> Use xEdit for such low-level editing.</td></tr>
             <tr><td colspan="2" id="modsCopyToEsm">Copy To Esm/Esp<td>Creates a .esp copy of a .esm or vice versa.
             <tr><td colspan="2" id="modsDecompileAll">Decompile All<td>Undoes the effect of a <q>Compile All</q> performed in the Construction Set. It will not do anything to the game's master file.
             <tr><td colspan="2" id="modsEsmifySelf">Add/Remove ESM Flag<td>The distinction between esp and esm plugins is not dependent on their file
@@ -5862,7 +5866,7 @@ C.Location, -C.LockList
             <tr><th colspan="2">Command</th><th>Description</th></tr>
         </thead>
         <tbody>
-            <tr><td rowspan="10">File..</td>
+            <tr><td rowspan="7">File..</td>
                 <td>Rename...</td><td>Rename the selected save file. <code>.bak</code> files
                     are not supported and you can't change the extension (specifying another
                     extension will make the rename fail).</td></tr>
@@ -5871,13 +5875,11 @@ C.Location, -C.LockList
                 <tr><td>Hide...</td><td>Moves the selected save file to the
                     <code>My Games\[Game]\Saves\[optional profile dir\]Bash\Hidden</code>
                     directory.</td></tr>
-                <tr><td>Redate...</td><td>Change the modification time of the selected save.
-                    If more than one save is selected, then all the save will have their
-                    modification times altered, with the first in the list being set to the
-                    specified time and the rest at one minute intervals from that
-                    time.</td></tr>
-                <tr><td>Delete</td><td>Permanently deletes the selected save file and any
-                    backups of it.</td></tr>
+                <tr>
+                    <td>Delete</td>
+                    <td>Deletes the selected save(s) and any backups of them.
+                        Deleted saves are sent to the Recycling Bin.</td>
+                </tr>
                 <tr><td>Backup</td><td>Creates a backup of the selected save file in
                     <code>[Game] Mods\Bash Mod Data\Backups</code>. On first run, the backed-up
                     save file has <code>f</code> appended to its file extension, giving
@@ -5886,13 +5888,6 @@ C.Location, -C.LockList
                     backup made of it.</td></tr>
                 <tr><td>Revert to First Backup...</td><td>Reverts the selected save file to the
                     first backup made of it.</td></tr>
-                <tr><td>Snapshot...</td><td>Creates a snapshot copy of the selected save in
-                    <code>Bash\Snapshots</code>. Snapshot filenames are appended with
-                    <code>-n</code> where n is a number between 01 and 99. Eg. the first
-                    snapshot of <code>MySave.ess</code> is <code>MySave-01.ess</code>. The
-                    number is incremented each time the save has a snapshot taken.</td></tr>
-                <tr><td>Revert To Snapshot...</td><td>Reverts the selected save to a selected
-                    snapshot.</td></tr>
             <tr><td colspan="2" id="savesMoveTo">Move To</td><td>This submenu allows you to
                 specify a save profile to move the selected save(s) to from the active save
                 profile.</td></tr>
@@ -6141,7 +6136,11 @@ C.Location, -C.LockList
                     will remain the same and specifying a non-image extension will make the rename
                     operation fail - in short, leave the extension alone. Empty filenames will also
                     abort the rename.</td></tr>
-                <tr><td>Delete</td><td>Deletes the selected file(s).</td></tr>
+                <tr>
+                    <td>Delete</td>
+                    <td>Deletes the selected screenshot(s). Deleted screenshots
+                        are sent to the Recycling Bin.</td>
+                </tr>
             <tr><td colspan="2">Convert</td><td>Converts the selected files to one of the following
                 formats: JPEG, PNG, BMP, TIFF. If a file of the conversion format already exists with
                 the same name as a file to be converted, the conversion will not take place for that

@@ -65,8 +65,7 @@ __all__ = ['Mod_FullLoad', 'Mod_CreateDummyMasters', 'Mod_OrderByName',
            'Mod_SigilStoneDetails_Import', 'Mod_SpellRecords_Import',
            'Mod_Face_Import', 'Mod_Fids_Replace', 'Mod_SkipDirtyCheck',
            'Mod_ScanDirty', 'Mod_RemoveWorldOrphans', 'Mod_FogFixer',
-           'Mod_UndeleteRefs', 'Mod_AddMaster', 'Mod_CopyToEsmp',
-           'Mod_DecompileAll', 'Mod_FlipEsm', 'Mod_FlipEsl',
+           'Mod_CopyToEsmp', 'Mod_DecompileAll', 'Mod_FlipEsm', 'Mod_FlipEsl',
            'Mod_FlipMasters', 'Mod_SetVersion', 'Mod_ListDependent',
            'Mod_JumpToInstaller', 'Mod_Move']
 
@@ -89,7 +88,7 @@ class Mod_FullLoad(OneItemLink):
             try:
                 modFile.load(True, progress)
             except:
-                deprint('exception:\n', traceback=True)
+                bolt.deprint(u'exception:\n', traceback=True)
 
 # File submenu ----------------------------------------------------------------
 # the rest of the File submenu links come from file_links.py
@@ -125,6 +124,13 @@ class Mod_CreateDummyMasters(OneItemLink):
             previous_master = master
             newFile = mod_files.ModFile(newInfo, mod_files.LoadFactory(True))
             newFile.tes4.author = u'BASHED DUMMY'
+            # Add the appropriate flags based on extension. This is obviously
+            # just a guess - you can have a .esm file without an ESM flag in
+            # Skyrim LE - but these are also just dummy masters.
+            if newInfo.name.cext in (u'.esm', u'.esl'):
+                newFile.tes4.flags1.esm = True
+            if newInfo.name.cext == u'.esl':
+                newFile.tes4.flags1.eslFile = True
             newFile.safeSave()
         to_select = []
         for mod, info, previous in to_refresh:
@@ -608,7 +614,7 @@ def _getUrl(fileName, installer, log_txt):
     url = None
     ma = bosh.reTesNexus.search(installer)
     if ma and ma.group(2):
-        url = bush.game.nexusUrl + u'downloads/file.php?id=' + ma.group(2)
+        url = bush.game.nexusUrl + u'mods/' + ma.group(2)
     if not url:
         ma = bosh.reTESA.search(installer)
         if ma and ma.group(2):
@@ -993,9 +999,13 @@ class _Mod_Patch_Update(_Mod_BP_Link):
         patch_files.executing_patch = self._selected_item
         mods_prior_to_patch = load_order.cached_lower_loading_espms(
             self._selected_item)
-        if self.doCBash or bass.settings['bash.CBashEnabled']:
-            # if doing a python patch but CBash is enabled, it's very likely
-            # that the merge info currently is from a CBash mode scan, rescan
+        if bush.game.Esp.canCBash:
+            # If the game has CBash capabilities we *have* to rescan each time
+            # or we may end up in a situation where a user decides to use the
+            # '-P' CLI parameter to disable CBash and build a PBash patch using
+            # the cached mergeability information - which now contains
+            # mergeable mods that PBash can't handle!
+            ##: We can drop this once PBash and CBash are equally capable
             bosh.modInfos.rescanMergeable(mods_prior_to_patch,
                                           doCBash=self.doCBash)
             self.window.RefreshUI(refreshSaves=False) # rescanned mergeable
@@ -1406,88 +1416,7 @@ class Mod_FogFixer(ItemLink):
             message = _(u'No changes required.')
             self._showOk(message)
 
-#------------------------------------------------------------------------------
-class Mod_UndeleteRefs(EnabledLink):
-    """Undeletes refs in cells."""
-    _text = _(u'Undelete Refs')
-    _help = _(u'Undeletes refs in cells')
-    warn = _(u"Changes deleted refs to ignored.  This is a very advanced "
-             u"feature and should only be used by modders who know exactly "
-             u"what they're doing.")
-
-    def _enable(self):
-        return len(self.selected) != 1 or (
-            not bosh.reOblivion.match(self.selected[0].s))
-
-    def Execute(self):
-        if not self._askContinue(self.warn, 'bash.undeleteRefs.continue',
-                                 self._text): return
-        with balt.Progress(self._text) as progress:
-            progress.setFull(len(self.selected))
-            hasFixed = False
-            log = bolt.LogFile(StringIO.StringIO())
-            for index,(fileName,fileInfo) in enumerate(self.iselected_pairs()):
-                if bosh.reOblivion.match(fileName.s):
-                    self._showWarning(_(u'Skipping') + u' ' + fileName.s,
-                                      self._text)
-                    continue
-                progress(index,_(u'Scanning')+u' '+fileName.s+u'.')
-                cleaner = bosh.mods_metadata.ModCleaner(fileInfo)
-                cleaner.clean(bosh.mods_metadata.ModCleaner.UDR,
-                              SubProgress(progress, index, index + 1))
-                if cleaner.udr:
-                    hasFixed = True
-                    log.setHeader(u'== '+fileName.s)
-                    for fid in sorted(cleaner.udr):
-                        log(u'. %08X' % fid)
-        if hasFixed:
-            message = log.out.getvalue()
-        else:
-            message = _(u"No changes required.")
-        self._showWryeLog(message)
-        log.out.close()
-
 # Rest of menu Links ----------------------------------------------------------
-#------------------------------------------------------------------------------
-class Mod_AddMaster(OneItemLink):
-    """Adds master."""
-    _text = _(u'Add Master...')
-    _help = _(u'Adds a plugin as a master to this plugin without changing '
-              u'FormIDs. WARNING: DANGEROUS!')
-
-    def Execute(self):
-        message = _(u"WARNING! For advanced modders only! Adds specified "
-                    u"master to list of masters, thus ceding ownership of "
-                    u"new content of this mod to the new master. Useful for "
-                    u"splitting mods into esm/esp pairs.")
-        if not self._askContinue(message, 'bash.addMaster.continue',
-                                 _(u'Add Master')): return
-        wildcard = bosh.modInfos.plugin_wildcard(_(u'Masters'))
-        masterPaths = self._askOpenMulti(title=_(u'Add master:'),
-                                         defaultDir=self._selected_info.dir,
-                                         wildcard=wildcard)
-        if not masterPaths: return
-        names = []
-        for masterPath in masterPaths:
-            (dir_,name) = masterPath.headTail
-            if dir_ != self._selected_info.dir:
-                return self._showError(_(
-                    u"File must be selected from %s Data Files directory.")
-                                       % bush.game.fsName)
-            if name in self._selected_info.get_masters():
-                return self._showError(_(u"%s is already a master!") % name.s)
-            names.append(name)
-        # actually do the modification
-        for masters_name in load_order.get_ordered(names):
-            if masters_name in bosh.modInfos:
-                #--Avoid capitalization errors by getting the actual name from modinfos.
-                masters_name = bosh.modInfos[masters_name].name
-            self._selected_info.header.masters.append(masters_name)
-        self._selected_info.header.changed = True
-        self._selected_info.writeHeader()
-        bosh.modInfos.new_info(self._selected_item, notify_bain=True)
-        self.window.RefreshUI(refreshSaves=False) # why refreshing saves ?
-
 #------------------------------------------------------------------------------
 class Mod_CopyToEsmp(EnabledLink):
     """Create an esp(esm) copy of selected esm(esp)."""
@@ -2578,125 +2507,3 @@ class CBash_Mod_CellBlockInfo_Export(_Mod_Export_Link_CBash):
              u' block, subblock)')
 
     def _parser(self): return CBash_CellBlockInfo()
-
-# Unused ? --------------------------------------------------------------------
-from ..parsers import CompleteItemData, CBash_CompleteItemData
-
-class Mod_ItemData_Export(_Mod_Export_Link): # CRUFT
-    """Export pretty much complete item data from mod to text file."""
-    askTitle = _(u'Export item data to:')
-    csvFile = u'_ItemData.csv'
-    progressTitle = _(u"Export Item Data")
-    _text = _(u'Item Data...')
-    _help = _(u'Export pretty much complete item data from mod to text file')
-
-    def _parser(self):
-        return CBash_CompleteItemData() if CBashApi.Enabled else \
-            CompleteItemData()
-
-class Mod_ItemData_Import(_Mod_Import_Link): # CRUFT
-    """Import stats from text file or other mod."""
-    askTitle = _(u'Import item data from:')
-    csvFile = u'_ItemData.csv'
-    progressTitle = _(u'Import Item Data')
-    _text = _(u'Item Data...')
-    _help = _(u'Import pretty much complete item data from text file or other'
-             u' mod')
-    continueInfo = _(
-        u"Import pretty much complete item data from a text file.  This will "
-        u"replace existing data and is not reversible!")
-    continueKey = 'bash.itemdata.import.continue'
-    noChange = _(u'No relevant data to import.')
-
-    def _parser(self):
-    # CBash_CompleteItemData.writeToText is disabled, apparently has problems
-        return CompleteItemData()
-
-    def _log(self, changed, fileName):
-        with bolt.sio() as buff:
-            for modName in sorted(changed):
-                buff.write(_(u'Imported Item Data:') + u'\n* %03d  %s:\n' % (
-                    changed[modName], modName.s))
-            self._showLog(buff.getvalue())
-
-#------------------------------------------------------------------------------
-from ..bolt import deprint
-from ..cint import ObCollection
-
-class MasterList_AddMasters(ItemLink): # CRUFT
-    """Adds a master."""
-    _text = _(u'Add Masters...')
-    _help = _(u'Adds specified master to list of masters')
-
-    def Execute(self):
-        message = _(u"WARNING!  For advanced modders only!  Adds specified "
-            u"master to list of masters, thus ceding ownership of new content "
-            u"of this mod to the new master.  Useful for splitting mods into "
-            u"esm/esp pairs.")
-        if not self._askContinue(message, 'bash.addMaster.continue',
-                                 _(u'Add Masters')): return
-        modInfo = self.window.fileInfo
-        wildcard = bosh.modInfos.plugin_wildcard(_(u'Masters'))
-        masterPaths = self._askOpenMulti(
-                            title=_(u'Add masters:'), defaultDir=modInfo.dir,
-                            wildcard=wildcard)
-        if not masterPaths: return
-        names = []
-        for masterPath in masterPaths:
-            (dir_,name) = masterPath.headTail
-            if dir_ != modInfo.dir:
-                return self._showError(_(
-                    u"File must be selected from %s Data Files directory.")
-                                       % bush.game.fsName)
-            if name in modInfo.get_masters():
-                return self._showError(
-                    name.s + u' ' + _(u"is already a master."))
-            names.append(name)
-        for mastername in load_order.get_ordered(names):
-            if mastername in bosh.modInfos:
-                mastername = bosh.modInfos[mastername].name
-            modInfo.header.masters.append(mastername)
-        modInfo.header.changed = True
-        self.window.SetFileInfo(modInfo)
-        self.window.InitEdit()
-        self.window.SetMasterlistEdited(repopulate=True)
-
-#------------------------------------------------------------------------------
-class MasterList_CleanMasters(AppendableLink, ItemLink): # CRUFT
-    """Remove unneeded masters."""
-    _text, _help = _(u'Clean Masters...'), _(u'Remove unneeded masters')
-
-    def _append(self, window): return bass.settings['bash.CBashEnabled']
-
-    def Execute(self):
-        message = _(u"WARNING!  For advanced modders only!  Removes masters that are not referenced in any records.")
-        if not self._askContinue(message, 'bash.cleanMaster.continue',
-                                 _(u'Clean Masters')): return
-        modInfo = self.window.fileInfo
-        mpath = modInfo.getPath()
-
-        with ObCollection(ModsPath=bass.dirs['mods'].s) as Current:
-            modFile = Current.addMod(mpath.stail)
-            Current.load()
-            oldMasters = modFile.TES4.masters
-            cleaned = modFile.CleanMasters()
-            if cleaned:
-                newMasters = modFile.TES4.masters
-                removed = [GPath(x) for x in oldMasters if x not in newMasters]
-                removeKey = _(u'Masters')
-                group = [removeKey, _(
-                    u'These master files are not referenced within the mod, '
-                    u'and can safely be removed.'), ]
-                group.extend(removed)
-                checklists = [group]
-                with ListBoxes(Link.Frame, _(u'Remove these masters?'), _(
-                        u'The following master files can be safely removed.'),
-                        checklists) as dialog:
-                    if not dialog.show_modal(): return
-                    newMasters.extend(
-                        dialog.getChecked(removeKey, removed, checked=False))
-                    modFile.TES4.masters = newMasters
-                    modFile.save()
-                    deprint(u'to remove:', removed)
-            else:
-                self._showOk(_(u'No Masters to clean.'), _(u'Clean Masters'))

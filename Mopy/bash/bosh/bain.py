@@ -1757,7 +1757,7 @@ class InstallersData(DataStore):
         if _index is not None:
             progress = SubProgress(progress, _index, _index + 1)
         installer.refreshBasic(progress, recalculate_project_crc=_fullRefresh)
-        progress(1.0, _(u'Done'))
+        if progress: progress(1.0, _(u'Done'))
         if do_refresh:
             self.irefresh(what='NS')
         return installer
@@ -2106,9 +2106,27 @@ class InstallersData(DataStore):
         InstallersData._miscTrackedFiles[abspath] = AFile(abspath)
 
     @staticmethod
-    def notify_external(changed=frozenset(), deleted=frozenset()):
-        InstallersData._externally_updated.update(changed)
-        InstallersData._externally_deleted.update(deleted)
+    def notify_external(changed=frozenset(), deleted=frozenset(), renamed={}):
+        """Notifies BAIN of changes in the Data folder done by something other
+        than BAIN.
+
+        :param changed: A set of file paths that have changed.
+        :type deleted: set[bolt.Path]
+        :param deleted: A set of file paths that have been deleted.
+        :type changed: set[bolt.Path]
+        :param renamed: A dict of file paths that were renamed. Maps old file
+            paths to new ones. Currently only updates tracked changed/deleted
+            paths.
+        :type renamed: dict[Path, Path]"""
+        ext_updated = InstallersData._externally_updated
+        ext_deleted = InstallersData._externally_deleted
+        ext_updated.update(changed)
+        ext_deleted.update(deleted)
+        for renamed_old, renamed_new in renamed.iteritems():
+            for ext_tracker in (ext_updated, ext_deleted):
+                if renamed_old in ext_tracker:
+                    ext_tracker.discard(renamed_old)
+                    ext_tracker.add(renamed_new)
 
     def refreshTracked(self):
         deleted, changed = set(InstallersData._externally_deleted), set(
@@ -2547,7 +2565,7 @@ class InstallersData(DataStore):
                 # Keep both versions of the BP doc (.txt and .html)
                 keepFiles.add((bolt.CIstr('%s' % bp_doc)))
                 keepFiles.add((bolt.CIstr(
-                    bp_doc.root.s + (u'.txt' if bp_doc.cext == u'.txt'
+                    bp_doc.root.s + (u'.txt' if bp_doc.cext == u'.html'
                                      else u'.html'))))
         keepFiles.update((bolt.CIstr(f) for f in bush.game.wryeBashDataFiles))
         keepFiles.update((bolt.CIstr(f) for f in bush.game.ignoreDataFiles))
