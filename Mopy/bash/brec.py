@@ -114,6 +114,12 @@ class RecordHeader(object):
     recordTypes = set()
     #--Plugin form version, we must pack this in the TES4 header
     plugin_form_version = 0
+    # For __repr__ info only
+    _debug_info = {0: u'Top', 1: u'World Children', 2: u'Interior Cell Block',
+                   3: u'Interior Cell Sub-Block', 4: u'Exterior Cell Block',
+                   5: u'Exterior Cell Sub-Block', 6: u'Cell Children',
+                   7: u'Topic Children', 8: u'Cell Persistent Childen',
+                   9: u'Cell Temporary Children'}
 
     def __init__(self, recType='TES4', size=0, arg1=0, arg2=0, arg3=0, arg4=0):
         """RecordHeader defining different sets of attributes based on recType
@@ -207,10 +213,11 @@ class RecordHeader(object):
 
     def __repr__(self):
         if self.recType == 'GRUP':
-            return u'<GRUP Header: %s v%u>' % (self.label, self.form_version)
+            return u'<GRUP Header: %s, %s>' % (
+                self._debug_info[self.groupType], self.label,)
         else:
-            return u'<Record Header: %s v%u>' % (strFid(self.fid),
-                                                  self.form_version)
+            return u'<Record Header: [%s:%s] v%u>' % (
+                self.recType, strFid(self.fid), self.form_version)
 
 #------------------------------------------------------------------------------
 class ModReader(object):
