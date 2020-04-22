@@ -58,7 +58,7 @@ __all__ = ['Installer_Open', 'Installer_Duplicate', 'InstallerOpenAt_MainMenu',
            'Installer_Uninstall', 'InstallerConverter_MainMenu',
            'InstallerConverter_Create', 'InstallerConverter_ConvertMenu',
            'InstallerProject_Pack', 'InstallerArchive_Unpack',
-           'InstallerProject_ReleasePack', 'InstallerProject_Sync',
+           'InstallerProject_ReleasePack', 'Installer_SyncFromData',
            'Installer_CopyConflicts', 'InstallerProject_OmodConfig',
            'Installer_ListStructure', 'Installer_Espm_SelectAll',
            'Installer_Espm_DeselectAll', 'Installer_Espm_List',
@@ -1068,20 +1068,37 @@ class InstallerProject_OmodConfig(_SingleProject):
     def Execute(self):
         InstallerProject_OmodConfigDialog(self.window,
                                           self._selected_item).show_frame()
-
 #------------------------------------------------------------------------------
-class InstallerProject_Sync(_SingleProject):
-    """Synchronize the project with files from the Data directory."""
+class Installer_SyncFromData(_SingleProject):
+    """Synchronize an archive or project with files from the Data directory."""
     _text = _(u'Sync from Data')
-    _help = _(u'Synchronize the project with files from the Data directory') + \
-        u'.  ' + _(u'Currently only for projects (not archives)')
+    _help = _(u'Synchronize an installer with files from the Data directory')
 
     def _enable(self):
-        if not super(InstallerProject_Sync, self)._enable(): return False
+        #-- 7z can't update rar archives in-place.
+        if self._selected_item.cext == u'.rar': return False
+        #-- Only enable Sync with Data for installed packages.
+        for package, installer in self.idata.items():
+            if package == self._selected_item.stail:
+                if installer.is_active == False: return False
         return bool(self._selected_info.missingFiles or
                     self._selected_info.mismatchedFiles)
 
     def Execute(self):
+        # For archives, there can only be one version of a changed file.
+        if self._selected_item.cext in (u'.7z',u'.zip'):
+            flist = [GPath(f).stail for f, __, __ in
+                     self._selected_info.fileSizeCrcs]
+            mlist = [GPath(m).stail for m in
+                     (self._selected_info.missingFiles |
+                      self._selected_info.mismatchedFiles)]
+            for m in mlist:  # list of missing or mismatched files
+                if flist.count(m) > 1:
+                    balt.showWarning(balt.Link.Frame,
+                        _(u'The file "%s" has several versions in the archive.'
+                        u' Unable to determine which archive file to update.'
+                        u' This cannot be updated automatically.' % m))
+                    return False
         missing = sorted(self._selected_info.missingFiles)
         mismatched = sorted(self._selected_info.mismatchedFiles)
         msg_del = [_(u'Files to delete (%u):') % len(missing),
@@ -1104,7 +1121,7 @@ class InstallerProject_Sync(_SingleProject):
         #--Sync it, baby!
         with balt.Progress(self._text, u'\n' + u' ' * 60) as progress:
             progress(0.1,_(u'Updating files.'))
-            self._selected_info.syncToData(sel_missing | sel_mismatched)
+            self._selected_info.syncFromData(sel_missing | sel_mismatched)
             self._selected_info.refreshBasic(SubProgress(progress, 0.1, 0.99))
             self.idata.irefresh(what='NS')
             self.window.RefreshUI()

@@ -615,7 +615,7 @@ class Installer(object):
          call graph from here should be the path that needs optimization (
          irefresh, ShowPanel ?)
          - in InstallersPanel.refreshCurrent()
-         - in 2 subclasses' install() and InstallerProject.syncToData()
+         - in 2 subclasses' install() and InstallerProject.syncFromData()
          - in _Installers_Skip._do_installers_refresh()
          - in _RefreshingLink (override skips, HasExtraData, skip voices)
          - in Installer_CopyConflicts
@@ -1385,6 +1385,64 @@ class InstallerArchive(Installer):
         return self._extract_wizard_files(self.has_fomod_conf,
                                           _(u'Extracting FOMOD files...'))
 
+    def _update_package(self, package, files_affected, action, rtn_phrase):
+        """ Update package and return number of files affected.
+         :param package: name of package
+         :param files_affected [str]: list of missing or mismatched files
+         :param action: A to update file(s), D to delete file(s)
+         :param rtn_phrase: regex pattern to scan 7z returned text results
+                            to get number of files affected by action """
+        #-- NB: Does not delete any empty folders from game/Data
+        if len(files_affected) == 0: return 0
+        numb_files_changed = 0
+        CREATE_NO_WINDOW = 0x08000000
+        cmd = u'%s %s -r "%s" %s -scsUTF-8' % (archives.exe7z, action,
+              package, u' '.join('"{0}"'.format(x) for x in files_affected))
+        try:
+            rtn_msg = bolt.subprocess.check_output(cmd,
+                                        creationflags=CREATE_NO_WINDOW)
+        finally:
+            m = re.search(rtn_phrase, rtn_msg)
+            if m:
+                numb_files_changed = int(m.group(1))
+        return numb_files_changed
+
+    def _archive_upt_files(self, archive, files):
+        """Update mismatched files in Archive and return number updated."""
+        # If success: "Add new data to archive: 1 file, 138 bytes (1 KiB)"
+        # u for update doesnt' work. Usa a (to add) instead.
+        # See: https://stackoverflow.com/questions/45770704
+        return self._update_package(archive, files, u'a',
+                            u'Add new data to archive.+?(\d+) file')
+
+    def _archive_del_files(self, archive, files):
+        """Delete missing files in Archive and return number deleted."""
+        # If success: "Delete data from archive: 1 file, 19 bytes (1 KiB)"
+        return self._update_package(archive, files, u'd',
+                           u'Delete data from archive.+?(\d+) file')
+
+    def syncFromData(self, deltaFiles):
+        """Copies specified deltaFiles from Data to archive.
+        :type deltaFiles: set[bolt.CIstr] missing or mismatched files"""
+        #--Sync Files
+        # calling 7z once rather than once for each file
+        gameDir = bass.dirs['mods']
+        removed = [gameDir.join(x).s for x in deltaFiles
+                   if not gameDir.join(x).exists()]
+        updated = [gameDir.join(x).s for x in deltaFiles
+                   if gameDir.join(x).exists()]
+        archivePath = bass.dirs['installers'].join(self.archive)
+        del_numb = self._archive_del_files(archivePath.s, removed)
+        upt_numb = self._archive_upt_files(archivePath.s, updated)
+        if del_numb != len(removed) or upt_numb != len(updated):
+            balt.showWarning(balt.Link.Frame,
+                _(u'Something went wrong when updating "%s" archive.'
+                u'\nDeleted %s. Expected to delete %s file(s).' 
+                u'\nUpdated %s. Expected to update %s file(s).' 
+                u'\nCheck the integrity of the archive.' %
+                (self.archive, del_numb, len(removed), upt_numb,len(updated))))
+        return upt_numb, del_numb
+
 #------------------------------------------------------------------------------
 class InstallerProject(Installer):
     """Represents a directory/build installer entry."""
@@ -1508,7 +1566,7 @@ class InstallerProject(Installer):
         return self._fs_install(dest_src, srcDirJoin, progress, progressPlus,
                                 None)
 
-    def syncToData(self, projFiles):
+    def syncFromData(self, projFiles):
         """Copies specified projFiles from Oblivion\Data to project
         directory.
         :type projFiles: set[bolt.CIstr]"""
