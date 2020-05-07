@@ -284,6 +284,8 @@ class PatchDialog(DialogWindow):
         except BoltError as error:
             balt.playSound(self.parent, bass.inisettings['SoundError'].s)
             balt.showError(self,u'%s'%error,_(u'Processing Error'))
+            bolt.deprint(u'An error occurred when processing records.',
+                         traceback=True)
         except:
             balt.playSound(self.parent, bass.inisettings['SoundError'].s)
             raise

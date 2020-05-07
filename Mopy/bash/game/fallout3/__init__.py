@@ -142,11 +142,12 @@ class Fallout3GameInfo(GameInfo):
         u'C.Encounter', u'C.ForceHideLand', u'C.ImageSpace', u'C.Light',
         u'C.Music', u'C.Name', u'C.Owner', u'C.RecordFlags', u'C.Regions',
         u'C.Water', u'Creatures.Blood', u'Creatures.Type', u'Deactivate',
-        u'Deflst', u'Delev', u'Destructible', u'Factions', u'Filter',
+        u'Deflst', u'Delev', u'Derel', u'Destructible', u'Factions', u'Filter',
         u'Graphics', u'Invent', u'MustBeActiveIfImported', u'Names',
         u'NoMerge', u'NPC.Class', u'Npc.EyesOnly', u'Npc.HairOnly',
         u'NPC.Race', u'NpcFaces', u'NpcFacesForceFullImport', u'ObjectBounds',
-        u'Relev', u'Scripts', u'Sound', u'SpellStats', u'Stats', u'Text',
+        u'Relations', u'Relev', u'Scripts', u'Sound', u'SpellStats', u'Stats',
+        u'Text',
     }
 
     # ActorImporter, AliasesPatcher, AssortedTweaker, CellImporter, ContentsChecker,
@@ -161,10 +162,10 @@ class Fallout3GameInfo(GameInfo):
         u'ContentsChecker', u'DeathItemPatcher', u'DestructiblePatcher',
         u'FidListsMerger', u'GmstTweaker', u'GraphicsPatcher',
         u'ImportActorsSpells', u'ImportFactions', u'ImportInventory',
-        u'ImportScripts', u'KFFZPatcher', u'ListsMerger', u'NamesPatcher',
-        u'NPCAIPackagePatcher', u'NpcFacePatcher', u'ObjectBoundsImporter',
-        u'SoundPatcher', u'SpellsPatcher', u'StatsPatcher', u'TextImporter',
-        u'TweakActors',
+        u'ImportRelations', u'ImportScripts', u'KFFZPatcher', u'ListsMerger',
+        u'NamesPatcher', u'NPCAIPackagePatcher', u'NpcFacePatcher',
+        u'ObjectBoundsImporter', u'SoundPatcher', u'SpellsPatcher',
+        u'StatsPatcher', u'TextImporter', u'TweakActors',
     )
 
     weaponTypes = (

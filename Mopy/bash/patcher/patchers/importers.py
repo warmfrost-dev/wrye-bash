@@ -1185,64 +1185,7 @@ class CBash_DeathItemPatcher(CBash_ImportPatcher):
 class ImportFactions(_SimpleImporter):
     logMsg = u'\n=== ' + _(u'Refactioned Actors')
     srcsHeader = u'=== ' + _(u'Source Mods/Files')
-
-    def initData(self,progress):
-        """Get names from source files."""
-        actorFactions = self._parse_sources(progress, parser=ActorFactions)
-        if not actorFactions: return
-        #--Finish
-        id_factions= self.id_data
-        for type,aFid_factions in actorFactions.type_id_factions.iteritems():
-            if type not in ('CREA','NPC_'): continue
-            self.srcClasses.add(MreRecord.type_class[type])
-            for longid,factions in aFid_factions.iteritems():
-                id_factions[longid] = factions
-        self.isActive = bool(self.srcClasses)
-
-    def scanModFile(self, modFile, progress): # scanModFile2
-        """Scan modFile."""
-        id_factions = self.id_data
-        mapper = modFile.getLongMapper()
-        for recClass in self.srcClasses:
-            if recClass.classType not in modFile.tops: continue
-            patchBlock = getattr(self.patchFile, recClass.classType)
-            id_records = patchBlock.id_records
-            for record in modFile.tops[recClass.classType].getActiveRecords():
-                fid = record.fid
-                if not record.longFids: fid = mapper(fid)
-                if fid in id_records: continue
-                if fid not in id_factions: continue
-                patchBlock.setRecord(record.getTypeCopy(mapper))
-
-    def _inner_loop(self, keep, records, top_mod_rec, type_count):
-        id_data, set_id_data = self.id_data, set(self.id_data)
-        for record in records:
-            fid = record.fid
-            if fid not in set_id_data: continue
-            newFactions = set(id_data[fid])
-            curFactions = set((x.faction, x.rank) for x in record.factions)
-            changed = newFactions - curFactions
-            if not changed: continue
-            doKeep = False
-            for faction, rank in changed:
-                for entry in record.factions:
-                    if entry.faction == faction:
-                        if entry.rank != rank:
-                            entry.rank = rank
-                            doKeep = True
-                            keep(fid)
-                        break
-                else:
-                    entry = MelObject()
-                    entry.faction = faction
-                    entry.rank = rank
-                    entry.unused1 = 'ODB'
-                    record.factions.append(entry)
-                    doKeep = True
-            if doKeep:
-                record.factions = [x for x in record.factions if x.rank != -1]
-                type_count[top_mod_rec] += 1
-                keep(fid)
+    rec_attrs = {x: (u'factions',) for x in bush.game.actor_types}
 
 class CBash_ImportFactions(_RecTypeModLogging):
     listSrcs = False
@@ -1335,6 +1278,7 @@ class ImportRelations(_SimpleImporter):
     def __init__(self, p_name, p_file, p_sources):
         super(ImportRelations, self).__init__(p_name, p_file, p_sources)
         self.id_data = {}  #--[(otherLongid0,disp0),(...)] =
+        self.id_deleted = {} # Tracks deleted relations, see FactionRelations
         # id_relations[mainLongid]. # WAS id_relations -renamed for _buildPatch
 
     def initData(self,progress):
@@ -1342,7 +1286,9 @@ class ImportRelations(_SimpleImporter):
         factionRelations = self._parse_sources(progress, parser=FactionRelations)
         if not factionRelations: return
         #--Finish
-        for fid, relations in factionRelations.id_relations.iteritems():
+        self.id_deleted = factionRelations.id_deleted
+        faction_dict = factionRelations.id_stored_info[b'FACT']
+        for fid, relations in faction_dict.iteritems():
             if fid and (
                     fid[0] is not None and fid[0] in self.patchFile.loadSet):
                 filteredRelations = [relation for relation in relations if
@@ -1378,28 +1324,49 @@ class ImportRelations(_SimpleImporter):
 
     def _inner_loop(self, keep, records, top_mod_rec, type_count):
         id_data, set_id_data = self.id_data, set(self.id_data)
+        rel_attrs = bush.game.relations_attrs
         for record in records:
             fid = record.fid
             if fid in set_id_data:
                 newRelations = set(id_data[fid])
-                curRelations = set(
-                    (x.faction, x.mod) for x in record.relations)
-                changed = newRelations - curRelations
-                if not changed: continue
+                curRelations = set(tuple(getattr(r, a) for a in rel_attrs)
+                                   for r in record.relations)
                 doKeep = False
-                for faction, disp in changed:
+                # Preserve changed relations and create new relations for the
+                # added ones that have been merged
+                for changed_attrs in newRelations - curRelations:
+                    # The target faction is always first, for all games
+                    faction = changed_attrs[0]
                     for entry in record.relations:
                         if entry.faction == faction:
-                            if entry.mod != disp:
-                                entry.mod = disp
-                                doKeep = True
-                                keep(fid)
-                            break
+                            for rel_attr, rel_val in zip(rel_attrs,
+                                                         changed_attrs):
+                                # This is a change, preserve the latest value
+                                if getattr(entry, rel_attr) != rel_val:
+                                    setattr(entry, rel_attr, rel_val)
+                                    doKeep = True
+                            if doKeep:
+                                break
                     else:
+                        # This is an addition, merge it into the result
                         entry = MelObject()
-                        entry.faction = faction
-                        entry.mod = disp
+                        for rel_attr, rel_val in zip(rel_attrs, changed_attrs):
+                            setattr(entry, rel_attr, rel_val)
                         record.relations.append(entry)
+                        doKeep = True
+                # Look for deleted relations that have been merged and remove
+                # them from the final result
+                for del_candidate in self.id_deleted[fid]:
+                    # Need to check by faction fid, since deletion must have
+                    # priority over changed values
+                    new_relations = filter(
+                        lambda r: r.faction != del_candidate.faction,
+                        record.relations)
+                    if record.relations != new_relations:
+                        # We removed something, make sure to keep the record
+                        # However, we don't want to terminate iteration! We may
+                        # have to remove more than one relation
+                        record.relations = new_relations
                         doKeep = True
                 if doKeep:
                     type_count[top_mod_rec] += 1

@@ -476,7 +476,9 @@ class ImportPatcher(AImportPatcher, ListPatcher):
     # helpers WIP
     def _parse_sources(self, progress, parser):
         if not self.isActive: return None
-        fullNames = parser(aliases=self.patchFile.aliases)
+        parser_instance = parser()
+        parser_instance.aliases = self.patchFile.aliases
+        parser_instance.called_from_patcher = True
         progress.setFull(len(self.srcs))
         for srcFile in self.srcs:
             srcPath = GPath(srcFile)
@@ -484,17 +486,17 @@ class ImportPatcher(AImportPatcher, ListPatcher):
             if minfs.rightFileType(srcPath):
                 if srcPath not in minfs: continue
                 srcInfo = minfs[srcPath]
-                fullNames.readFromMod(srcInfo)
+                parser_instance.readFromMod(srcInfo)
             else:
                 try:
-                    fullNames.readFromText(getPatchesPath(srcFile))
+                    parser_instance.readFromText(getPatchesPath(srcFile))
                 except OSError:
                     deprint(u'%s is no longer in patches set' % srcPath,
                         traceback=True)
                 except UnicodeError as e: # originally in NamesPatcher, keep ?
                     print(srcPath.stail, u'is not saved in UTF-8 format:', e)
             progress.plus()
-        return fullNames
+        return parser_instance
 
 class CBash_ImportPatcher(AImportPatcher, CBash_ListPatcher, SpecialPatcher):
     scanRequiresChecked = True
