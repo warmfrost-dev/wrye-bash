@@ -22,23 +22,24 @@
 #
 # =============================================================================
 """This module contains the skyrim record classes."""
+import struct
 from collections import OrderedDict
 
-from .constants import condition_function_data
 from ... import brec
 from ...bolt import Flags, encode, struct_pack, struct_unpack
 from ...brec import MelRecord, MelObject, MelGroups, MelStruct, FID, \
     MelGroup, MelString, MreLeveledListBase, MelSet, MelFid, MelNull, \
     MelOptStruct, MelFids, MreHeaderBase, MelBase, MelUnicode, MelFidList, \
-    MreGmstBase, MelLString, MelSortedFidList, MelMODS, MreHasEffects, \
-    MelColorInterpolator, MelValueInterpolator, MelUnion, AttrValDecider, \
-    MelRegnEntrySubrecord, PartialLoadDecider, FlagDecider, MelFloat, \
-    MelSInt8, MelSInt32, MelUInt8, MelUInt16, MelUInt32, MelOptFloat, \
-    MelOptSInt16, MelOptSInt32, MelOptUInt8, MelOptUInt16, MelOptUInt32, \
-    MelOptFid, MelCounter, MelPartialCounter, MelBounds, null1, null2, null3, \
-    null4, MelSequential, MelTruncatedStruct, MelIcons, MelIcons2, MelIcon, \
-    MelIco2, MelEdid, MelFull, MelArray, MelWthrColors, GameDecider
-from ...exception import BoltError, ModError, ModSizeError, StateError
+    MreGmstBase, MelLString, MelMODS, MreHasEffects, MelColorInterpolator, \
+    MelValueInterpolator, MelUnion, AttrValDecider, MelRegnEntrySubrecord, \
+    PartialLoadDecider, FlagDecider, MelFloat, MelSInt8, MelSInt32, MelUInt8, \
+    MelUInt16, MelUInt32, MelOptFloat, MelOptSInt16, MelOptSInt32, \
+    MelOptUInt8, MelOptUInt16, MelOptUInt32, MelOptFid, MelCounter, \
+    MelPartialCounter, MelBounds, null1, null2, null3, null4, MelSequential, \
+    MelTruncatedStruct, MelIcons, MelIcons2, MelIcon, MelIco2, MelEdid, \
+    MelFull, MelArray, MelWthrColors, GameDecider, MelReadOnly, \
+    MreDialBase, MreActorBase, MreWithItems, MelCtdaFo3, MelRef3D, MelXlod
+from ...exception import ModError, ModSizeError, StateError
 # Set MelModel in brec but only if unset, otherwise we are being imported from
 # fallout4.records
 if brec.MelModel is None:
@@ -72,19 +73,6 @@ from ...brec import MelModel
 
 #------------------------------------------------------------------------------
 # Record Elements    ----------------------------------------------------------
-#------------------------------------------------------------------------------
-# TODO(inf) Unused - use or bin (not sure if this actually works though)
-class MreActor(MelRecord):
-    """Creatures and NPCs."""
-
-    def mergeFilter(self,modSet):
-        """Filter out items that don't come from specified modSet.
-        Filters spells, factions and items."""
-        if not self.longFids: raise StateError(_("Fids not in long format"))
-        self.spells = [x for x in self.spells if x[0] in modSet]
-        self.factions = [x for x in self.factions if x.faction[0] in modSet]
-        self.items = [x for x in self.items if x.item[0] in modSet]
-
 #------------------------------------------------------------------------------
 class MelBipedObjectData(MelStruct):
     """Handler for BODT/BOD2 subrecords.  Reads both types, writes only BOD2"""
@@ -148,17 +136,20 @@ class MelBipedObjectData(MelStruct):
         loaders['BOD2'] = self
         loaders['BODT'] = self
 
-    def loadData(self, record, ins, sub_type, size_, readId):
+    def loadData(self, record, ins, sub_type, size_, readId,
+                 __unpacker2=struct.Struct(u'2I').unpack,
+                 __unpacker3=struct.Struct(u'3I').unpack):
         if sub_type == 'BODT':
             # Old record type, use alternate loading routine
             if size_ == 8:
                 # Version 20 of this subrecord is only 8 bytes (armorType omitted)
-                bipedFlags,legacyData = ins.unpack('=2I', size_, readId)
+                bipedFlags,legacyData = ins.unpack(__unpacker2, size_, readId)
                 armorFlags = 0
             elif size_ != 12:
                 raise ModSizeError(ins.inName, readId, (12, 8), size_)
             else:
-                bipedFlags,legacyData,armorFlags = ins.unpack('=3I', size_, readId)
+                bipedFlags, legacyData, armorFlags = ins.unpack(__unpacker3,
+                                                                size_, readId)
             # legacyData is discarded except for non-playable status
             setter = record.__setattr__
             setter('bipedFlags',MelBipedObjectData.BipedFlags(bipedFlags))
@@ -213,95 +204,18 @@ class MelColorO(MelOptStruct):
 
 #------------------------------------------------------------------------------
 class MelConditions(MelGroups):
-    """Wraps MelGroups for the common task of defining an array of conditions.
-    See also MelConditionCounter, which is commonly combined with this class.
-    Difficulty is that FID state of parameters depends on function index."""
-    class MelCtda(MelStruct):
-        def setDefault(self, record):
-            MelStruct.setDefault(self, record)
-            record.form12345 = 'iiIIi'
-
-        def hasFids(self, formElements):
-            formElements.add(self)
-
-        def loadData(self, record, ins, sub_type, size_, readId):
-            if size_ not in (32, 28, 24, 20):
-                raise ModSizeError(ins.inName, readId, (32, 28, 24, 20), size_)
-            unpacked1 = ins.unpack('=B3sfH2s', 12, readId)
-            (record.operFlag, record.unused1, record.compValue, ifunc,
-             record.unused2) = unpacked1
-            #--Get parameters
-            if ifunc not in condition_function_data:
-                raise BoltError(u'Unknown condition function: %d\nparam1: '
-                                u'%08X\nparam2: %08X' % (
-                    ifunc, ins.unpackRef(), ins.unpackRef()))
-            # Form1 is Param1 - 2 means fid
-            form1 = 'I' if condition_function_data[ifunc][1] == 2 else 'i'
-            # Form2 is Param2
-            form2 = 'I' if condition_function_data[ifunc][2] == 2 else 'i'
-            # Form3 is runOn
-            form3 = 'I'
-            # Form4 is reference, this is a formID when runOn = 2
-            form4 = 'I'
-            # Form5 is Param3
-            form5 = 'I' if condition_function_data[ifunc][3] == 2 else 'i'
-            if size_ == 32:
-                form12345 = form1 + form2 + form3 + form4 + form5
-                unpacked2 = ins.unpack(form12345, 20, readId)
-                (record.param1, record.param2, record.runOn, record.reference,
-                 record.param3) = unpacked2
-            elif size_ == 28:
-                form12345 = form1 + form2 + form3 + form4
-                unpacked2 = ins.unpack(form12345, 16, readId)
-                (record.param1, record.param2, record.runOn,
-                 record.reference) = unpacked2
-                record.param3 = null4
-            elif size_ == 24:
-                form12345 = form1 + form2 + form3
-                unpacked2 = ins.unpack(form12345, 12, readId)
-                (record.param1, record.param2, record.runOn) = unpacked2
-                record.reference, record.param3 = null4, null4
-            else: # size_ == 20, verified at the start
-                form12345 = form1 + form2
-                unpacked2 = ins.unpack(form12345, 8, readId)
-                record.param1, record.param2 = unpacked2
-                (record.runOn, record.reference,
-                 record.param3) = null4, null4, null4
-            record.ifunc, record.form12345 = ifunc, form12345
-
-        def dumpData(self,record,out):
-            out.packSub('CTDA', '=B3sfH2s' + record.form12345,
-                record.operFlag, record.unused1, record.compValue,
-                record.ifunc, record.unused2, record.param1, record.param2,
-                record.runOn, record.reference, record.param3)
-
-        def mapFids(self, record, function, save=False):
-                form12345 = record.form12345
-                if form12345[0] == 'I':
-                    result = function(record.param1)
-                    if save: record.param1 = result
-                if form12345[1] == 'I':
-                    result = function(record.param2)
-                    if save: record.param2 = result
-                # runOn is uint32, never FID
-                if (len(form12345) > 3 and form12345[3] == 'I'
-                        and record.runOn == 2):
-                    result = function(record.reference)
-                    if save: record.reference = result
-                if len(form12345) > 4 and form12345[4] == 'I':
-                    result = function(record.param3)
-                    if save: record.param3 = result
-
-    def __init__(self, attr='conditions'):
-        MelGroups.__init__(self, attr,
-            MelGroups('condition_list',
-                MelConditions.MelCtda(
-                    'CTDA', 'B3sfH2siiIIi', 'operFlag', ('unused1', null3),
-                    'compValue', 'ifunc', ('unused2', null2), 'param1',
-                    'param2', 'runOn', 'reference', 'param3'),
+    """A list of conditions. See also MelConditionCounter, which is commonly
+    combined with this class."""
+    def __init__(self, conditions_attr=u'conditions'):
+        super(MelConditions, self).__init__(conditions_attr,
+            MelGroups(u'condition_list',
+                MelCtdaFo3(
+                    suffix_fmt=u'2Ii',
+                    suffix_elements=[u'runOn', (FID, u'reference'), u'param3'],
+                    old_suffix_fmts={u'2I', u'I', u''}),
             ),
-            MelString('CIS1','param_cis1'),
-            MelString('CIS2','param_cis2'),
+            MelString(b'CIS1', u'param_cis1'),
+            MelString(b'CIS2', u'param_cis2'),
         )
 
 class MelConditionCounter(MelCounter):
@@ -347,9 +261,11 @@ class MelDestructible(MelGroup):
         MelGroup.__init__(self,attr,
             MelStruct('DEST','i2B2s','health','count','vatsTargetable','dest_unused'),
             MelGroups('stages',
-                MelStruct('DSTD','=4Bi2Ii','health','index','damageStage',
-                         (MelDestructible.MelDestStageFlags,'flags',0),'selfDamagePerSecond',
-                         (FID,'explosion',None),(FID,'debris',None),'debrisCount'),
+                MelStruct(b'DSTD', u'4Bi2Ii', u'health', u'index',
+                          u'damageStage',
+                          (MelDestructible.MelDestStageFlags, u'flagsDest'),
+                          u'selfDamagePerSecond', (FID, u'explosion'),
+                          (FID, u'debris'), u'debrisCount'),
                 MelModel('model','DMDL'),
                 MelBase('DSTF','footer'),
             ),
@@ -371,7 +287,7 @@ class MelItems(MelGroups):
     """Wraps MelGroups for the common task of defining a list of items."""
     def __init__(self):
         MelGroups.__init__(self, 'items',
-            MelStruct('CNTO', 'Ii', (FID, 'item', None), 'count'),
+            MelStruct(b'CNTO', u'Ii', (FID, u'item'), u'count'),
             MelCoed(),
         )
 
@@ -393,14 +309,51 @@ class MelKeywords(MelSequential):
             MelFidList('KWDA', 'keywords'),
         )
 
+class MelLocation(MelUnion):
+    """A PLDT/PLVD (Location) subrecord. Occurs in PACK and FACT."""
+    def __init__(self, sub_sig):
+        super(MelLocation, self).__init__({
+                0: MelOptStruct(sub_sig, u'iIi', u'location_type',
+                                (FID, u'location_value'), u'location_radius'),
+                1: MelOptStruct(sub_sig, u'iIi', u'location_type',
+                                (FID, u'location_value'), u'location_radius'),
+                2: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                u'location_value', u'location_radius'),
+                3: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                u'location_value', u'location_radius'),
+                4: MelOptStruct(sub_sig, u'iIi', u'location_type',
+                                (FID, u'location_value'), u'location_radius'),
+                5: MelOptStruct(sub_sig, u'iIi', u'location_type',
+                                u'location_value', u'location_radius'),
+                6: MelOptStruct(sub_sig, u'iIi', u'location_type',
+                                (FID, u'location_value'), u'location_radius'),
+                7: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                u'location_value', u'location_radius'),
+                8: MelOptStruct(sub_sig, u'3i', u'location_type',
+                                u'location_value', u'location_radius'),
+                9: MelOptStruct(sub_sig, u'3i', u'location_type',
+                                u'location_value', u'location_radius'),
+                10: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                 u'location_value', u'location_radius'),
+                11: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                 u'location_value', u'location_radius'),
+                12: MelOptStruct(sub_sig, u'i4si', u'location_type',
+                                 u'location_value', u'location_radius'),
+            }, decider=PartialLoadDecider(
+                loader=MelSInt32(sub_sig, u'location_type'),
+                decider=AttrValDecider(u'location_type'))
+        )
+
 #------------------------------------------------------------------------------
 class MelOwnership(MelGroup):
     """Handles XOWN, XRNK for cells and cell children."""
 
-    def __init__(self,attr='ownership'):
-        MelGroup.__init__(self,attr,
-            MelFid('XOWN','owner'),
-            MelOptSInt32('XRNK', ('rank', None)),
+    def __init__(self, attr=u'ownership'):
+        MelGroup.__init__(self, attr,
+            MelFid(b'XOWN', u'owner'),
+            # None here is on purpose - rank == 0 is a valid value, but XRNK
+            # does not have to be present
+            MelOptSInt32(b'XRNK', (u'rank', None)),
         )
 
     def dumpData(self,record,out):
@@ -459,10 +412,11 @@ def _dump_vmad_str16(str_val):
     encoded_str = encode(str_val, firstEncoding='cp1252')
     return struct_pack('=H', len(encoded_str)) + encoded_str
 
-def _read_vmad_str16(ins, read_id):
+def _read_vmad_str16(ins, read_id, __unpacker=struct.Struct(u'H').unpack):
     """Reads a 16-bit length integer, then reads a string in that length.
     Always uses cp1252 to decode."""
-    return ins.read(ins.unpack('H', 2, read_id)[0], read_id).decode('cp1252')
+    return ins.read(ins.unpack(__unpacker, 2, read_id)[0], read_id).decode(
+        u'cp1252')
 
 class _AVmadComponent(object):
     """Abstract base class for VMAD components. Specify a 'processors'
@@ -505,7 +459,7 @@ class _AVmadComponent(object):
             if fmt_str == 'str16':
                 setter(attr, _read_vmad_str16(ins, read_id))
             else:
-                setter(attr, ins.unpack(fmt_str, fmt[1], read_id)[0])
+                setter(attr, ins.unpack(struct.Struct(fmt_str).unpack, fmt[1], read_id)[0])
 
     def make_new(self):
         """Creates a new runtime instance of this component with the
@@ -688,12 +642,13 @@ class ObjectRef(object):
 
     # Static helper methods
     @classmethod
-    def array_from_file(cls, ins, obj_format, read_id):
+    def array_from_file(cls, ins, obj_format, read_id,
+                        __unpacker=struct.Struct(u'I').unpack):
         """Reads an array of ObjectRefs directly from the specified input
         stream. Needs the current object format and a read ID as well."""
         make_ref = cls.from_file
         return [make_ref(ins, obj_format, read_id) for _x in
-                xrange(ins.unpack('I', 4, read_id)[0])]
+                xrange(ins.unpack(__unpacker, 4, read_id)[0])]
 
     @staticmethod
     def dump_array(target_list):
@@ -706,13 +661,15 @@ class ObjectRef(object):
         return out_data
 
     @classmethod
-    def from_file(cls, ins, obj_format, read_id):
+    def from_file(cls, ins, obj_format, read_id,
+                  __unpacker1=struct.Struct(u'IhH').unpack,
+                  __unpacker2=struct.Struct(u'HhI').unpack):
         """Reads an ObjectRef directly from the specified input stream. Needs
         the current object format and a read ID as well."""
         if obj_format == 1: # object format v1 - fid, aid, unused
-            fid, aid, _unused = ins.unpack('IhH', 8, read_id)
+            fid, aid, _unused = ins.unpack(__unpacker1, 8, read_id)
         else: # object format v2 - unused, aid, fid
-            _unused, aid, fid = ins.unpack('HhI', 8, read_id)
+            _unused, aid, fid = ins.unpack(__unpacker2, 8, read_id)
         return cls(aid, fid)
 
 # Implementation --------------------------------------------------------------
@@ -851,7 +808,8 @@ class MelVmad(MelBase):
             self.child_loader = MelVmad.FragmentQUST()
             self._alias_loader = MelVmad.Alias()
 
-        def load_data(self, record, ins, vmad_version, obj_format, read_id):
+        def load_data(self, record, ins, vmad_version, obj_format, read_id,
+                      __unpacker=struct.Struct(u'H').unpack):
             # Load the regular fragments first
             super(MelVmad.VmadHandlerQUST, self).load_data(
                 record, ins, vmad_version, obj_format, read_id)
@@ -860,7 +818,7 @@ class MelVmad(MelBase):
             new_alias = self._alias_loader.make_new
             load_alias = self._alias_loader.load_data
             append_alias = record.aliases.append
-            for x in xrange(ins.unpack('H', 2, read_id)[0]):
+            for x in xrange(ins.unpack(__unpacker, 2, read_id)[0]):
                 alias = new_alias()
                 load_alias(alias, ins, vmad_version, obj_format, read_id)
                 append_alias(alias)
@@ -908,13 +866,14 @@ class MelVmad(MelBase):
             self.child_loader = MelVmad.FragmentBasic()
             self._phase_loader = MelVmad.FragmentSCENPhase()
 
-        def load_data(self, record, ins, vmad_version, obj_format, read_id):
+        def load_data(self, record, ins, vmad_version, obj_format, read_id,
+                      __unpacker=struct.Struct(u'H').unpack):
             # First, load the regular attributes and fragments
             super(MelVmad.VmadHandlerSCEN, self).load_data(
                 record, ins, vmad_version, obj_format, read_id)
             # Then, load each phase fragment
             record.phase_fragments = []
-            frag_count, = ins.unpack('H', 2, read_id)
+            frag_count, = ins.unpack(__unpacker, 2, read_id)
             new_fragment = self._phase_loader.make_new
             load_fragment = self._phase_loader.load_data
             append_fragment = record.phase_fragments.append
@@ -986,7 +945,9 @@ class MelVmad(MelBase):
             (1, 'removed'),
         ))
 
-        def load_data(self, record, ins, vmad_version, obj_format, read_id):
+        def load_data(self, record, ins, vmad_version, obj_format, read_id,
+                      __unpackers={k: struct.Struct(k).unpack for k in
+                                   (u'i', u'f', u'B', u'I',)}):
             # Load the three regular attributes first - need to check version
             if vmad_version >= 4:
                 MelVmad.Property.processors = MelVmad.Property._new_processors
@@ -1011,36 +972,36 @@ class MelVmad(MelBase):
             elif property_type == 2: # string
                 record.prop_data = _read_vmad_str16(ins, read_id)
             elif property_type == 3: # sint32
-                record.prop_data, = ins.unpack('i', 4, read_id)
+                record.prop_data, = ins.unpack(__unpackers[u'i'], 4, read_id)
             elif property_type == 4: # float
-                record.prop_data, = ins.unpack('f', 4, read_id)
+                record.prop_data, = ins.unpack(__unpackers[u'f'], 4, read_id)
             elif property_type == 5: # bool (stored as uint8)
                 # Faster than bool() and other, similar checks
-                record.prop_data = ins.unpack('B', 1, read_id) != (0,)
+                record.prop_data = ins.unpack(__unpackers[u'B'], 1, read_id) != (0,)
             elif property_type == 11: # object array
                 record.prop_data = ObjectRef.array_from_file(ins, obj_format,
                                                              read_id)
             elif property_type == 12: # string array
                 record.prop_data = [_read_vmad_str16(ins, read_id) for _x in
-                                    xrange(ins.unpack('I', 4, read_id)[0])]
+                                    xrange(ins.unpack(__unpackers[u'I'], 4, read_id)[0])]
             elif property_type == 13: # sint32 array
-                array_len, = ins.unpack('I', 4, read_id)
+                array_len, = ins.unpack(__unpackers[u'I'], 4, read_id)
                 # Do *not* change without extensive benchmarking! This is
                 # faster than all alternatives, at least on py2.
                 record.prop_data = [x for x in ins.unpack(
-                    repr(array_len) + 'i', array_len * 4, read_id)]
+                    struct.Struct(u'%di' % array_len).unpack, array_len * 4, read_id)]
             elif property_type == 14: # float array
-                array_len, = ins.unpack('I', 4, read_id)
+                array_len, = ins.unpack(__unpackers[u'I'], 4, read_id)
                 # Do *not* change without extensive benchmarking! This is
                 # faster than all alternatives, at least on py2.
                 record.prop_data = [x for x in ins.unpack(
-                    repr(array_len) + 'f', array_len * 4, read_id)]
+                    struct.Struct(u'%df' % array_len).unpack, array_len * 4, read_id)]
             elif property_type == 15: # bool array (stored as uint8 array)
-                array_len, = ins.unpack('I', 4, read_id)
+                array_len, = ins.unpack(__unpackers[u'I'], 4, read_id)
                 # Do *not* change without extensive benchmarking! This is
                 # faster than all alternatives, at least on py2.
                 record.prop_data = [x != 0 for x in ins.unpack(
-                    repr(array_len) + 'B', array_len, read_id)]
+                    struct.Struct(u'%dB' % array_len).unpack, array_len, read_id)]
             else:
                 raise ModError(ins.inName, u'Unrecognized VMAD property type: '
                                            u'%u' % property_type)
@@ -1125,16 +1086,18 @@ class MelVmad(MelBase):
             super(MelVmad.Alias, self).__init__()
             self.child_loader = MelVmad.Script()
 
-        def load_data(self, record, ins, vmad_version, obj_format, read_id):
+        def load_data(self, record, ins, vmad_version, obj_format, read_id,
+                      __unpacker_H=struct.Struct(u'H').unpack,
+                      __unpacker_h=struct.Struct(u'h').unpack):
             MelVmad.Alias.processors = MelVmad.Alias._load_processors
             # Aliases start with an ObjectRef, skip that for now and unpack
             # the three regular attributes. We need to do this, since one of
             # the attributes is alias_obj_format, which tells us how to unpack
             # the ObjectRef at the start.
             ins.seek(8, 1, read_id)
-            record.alias_vmad_version, = ins.unpack('h', 2, read_id)
-            record.alias_obj_format, = ins.unpack('h', 2, read_id)
-            record.script_count, = ins.unpack('H', 2, read_id)
+            record.alias_vmad_version, = ins.unpack(__unpacker_h, 2, read_id)
+            record.alias_obj_format, = ins.unpack(__unpacker_h, 2, read_id)
+            record.script_count, = ins.unpack(__unpacker_H, 2, read_id)
             # Change our active VMAD version and object format to the ones we
             # read from this alias
             vmad_version = record.alias_vmad_version
@@ -1199,7 +1162,8 @@ class MelVmad(MelBase):
             self._handler_map[record_sig] = special_handler = special_handler()
         return special_handler
 
-    def loadData(self, record, ins, sub_type, size_, readId):
+    def loadData(self, record, ins, sub_type, size_, readId,
+                      __unpacker=struct.Struct(u'=hhH').unpack):
         # Remember where this VMAD subrecord ends
         end_of_vmad = ins.tell() + size_
         if self._vmad_class is None:
@@ -1208,7 +1172,8 @@ class MelVmad(MelBase):
             self._vmad_class = _MelVmadImpl # create only once
         record.vmdata = vmad = self._vmad_class()
         # Begin by unpacking the VMAD header and doing some error checking
-        vmad_version, obj_format, script_count = ins.unpack('=hhH', 6, readId)
+        vmad_version, obj_format, script_count = ins.unpack(__unpacker, 6,
+                                                            readId)
         if vmad_version < 1 or vmad_version > 5:
             raise ModError(ins.inName, u'Unrecognized VMAD version: %u' %
                            vmad_version)
@@ -1273,7 +1238,7 @@ class MelVmad(MelBase):
 #------------------------------------------------------------------------------
 class MreTes4(MreHeaderBase):
     """TES4 Record.  File header."""
-    classType = 'TES4'
+    classType = b'TES4'
 
     melSet = MelSet(
         MelStruct('HEDR', 'f2I', ('version', 1.7), 'numRecords',
@@ -1291,7 +1256,7 @@ class MreTes4(MreHeaderBase):
 #------------------------------------------------------------------------------
 class MreAact(MelRecord):
     """Action."""
-    classType = 'AACT'
+    classType = b'AACT'
     melSet = MelSet(
         MelEdid(),
         MelColorO('CNAM'),
@@ -1301,72 +1266,69 @@ class MreAact(MelRecord):
 #------------------------------------------------------------------------------
 class MreAchr(MelRecord):
     """Placed NPC."""
-    classType = 'ACHR'
-    _flags = Flags(0,Flags.getNames('oppositeParent','popIn'))
+    classType = b'ACHR'
 
-    ActivateParentsFlags = Flags(0, Flags.getNames(
-            (0, 'parentActivateOnly'),
-        ))
+    _activate_parent_flags = Flags(0, Flags.getNames(u'parent_activate_only'))
+    _enable_parent_flags = Flags(0, Flags.getNames(u'opposite_parent',
+                                                   u'pop_in'))
 
     melSet = MelSet(
         MelEdid(),
         MelVmad(),
-        MelFid('NAME','base'),
-        MelFid('XEZN','encounterZone'),
-        MelBase('XRGD','ragdollData'),
-        MelBase('XRGB','ragdollBipedData'),
-        MelGroup('patrolData',
-            MelFloat('XPRD', 'idleTime',),
-            MelNull('XPPA'),
-            MelFid('INAM','idle'),
-            MelGroup('patrolData',
-                MelBase('SCHR','schr_p'),
-                MelBase('SCDA','scda_p'),
-                MelBase('SCTX','sctx_p'),
-                MelBase('QNAM','qnam_p'),
-                MelBase('SCRO','scro_p'),
-            ),
-            MelTopicData('topic_data'),
-            MelFid('TNAM','topic'),
+        MelFid(b'NAME', u'ref_base'),
+        MelFid(b'XEZN', u'encounter_zone'),
+        MelBase(b'XRGD', u'ragdoll_data'),
+        MelBase(b'XRGB', u'ragdoll_biped_data'),
+        MelFloat(b'XPRD', u'idle_time'),
+        MelBase(b'XPPA', u'patrol_script_marker'),
+        MelFid(b'INAM', u'ref_idle'),
+        MelBase(b'SCHR', u'unused_schr'),
+        MelBase(b'SCDA', u'unused_scda'),
+        MelBase(b'SCTX', u'unused_sctx'),
+        MelBase(b'QNAM', u'unused_qnam'),
+        MelBase(b'SCRO', u'unused_scro'),
+        MelTopicData(u'topic_data'),
+        MelFid(b'TNAM', u'ref_topic'),
+        MelSInt32(b'XLCM', u'level_modifier'),
+        MelFid(b'XMRC', u'merchant_container'),
+        MelSInt32(b'XCNT', u'ref_count'),
+        MelFloat(b'XRDS', u'ref_radius'),
+        MelFloat(b'XHLP', u'ref_health'),
+        MelGroups(u'linked_references',
+            MelStruct(b'XLKR', '2I', (FID, u'keyword_ref'),
+                      (FID, u'linked_ref')),
         ),
-        MelSInt32('XLCM', 'levelModifier'),
-        MelFid('XMRC','merchantContainer',),
-        MelSInt32('XCNT', 'count'),
-        MelFloat('XRDS', 'radius',),
-        MelFloat('XHLP', 'health',),
-        MelGroup('linkedReferences',
-            MelSortedFidList('XLKR', 'fids'),
+        MelUInt8(b'XAPD', (_activate_parent_flags, u'activate_parent_flags')),
+        MelGroups(u'activate_parent_refs',
+            MelStruct(b'XAPR', u'If', (FID, u'ap_reference'), u'ap_delay'),
         ),
-        MelGroup('activateParents',
-            MelUInt32('XAPD', (ActivateParentsFlags, 'flags', 0)),
-            MelGroups('activateParentRefs',
-                MelStruct('XAPR','If',(FID,'reference'),'delay',),
-            ),
+        MelStruct(b'XCLP', u'3Bs3Bs', u'start_color_red', u'start_color_green',
+                  u'start_color_blue', u'start_color_unused', u'end_color_red',
+                  u'end_color_green', u'end_color_blue', u'end_color_unused'),
+        MelFid(b'XLCN', u'persistent_location'),
+        MelFid(b'XLRL', u'location_reference'),
+        MelBase(b'XIS2', u'ignored_by_sandbox_2'),
+        MelArray(u'location_ref_type',
+            MelFid(b'XLRT', u'location_ref')
         ),
-        MelStruct('XCLP','3Bs3Bs','startColorRed','startColorGreen','startColorBlue',
-                  'startColorUnknown','endColorRed','endColorGreen','endColorBlue',
-                  'endColorUnknown',),
-        MelFid('XLCN','persistentLocation',),
-        MelFid('XLRL','locationReference',),
-        MelNull('XIS2'),
-        MelFidList('XLRT','locationRefType',),
-        MelFid('XHOR','horse',),
-        MelFloat('XHTW', 'headTrackingWeight',),
-        MelFloat('XFVC', 'favorCost',),
-        MelOptStruct('XESP','IB3s',(FID,'parent'),(_flags,'parentFlags'),'unused',),
+        MelFid(b'XHOR', u'ref_horse'),
+        MelFloat(b'XHTW', u'head_tracking_weight'),
+        MelFloat(b'XFVC', u'favor_cost'),
+        MelOptStruct(b'XESP', u'IB3s', (FID, u'ep_reference'),
+                     (_enable_parent_flags, u'parent_flags'), u'xesp_unused'),
         MelOwnership(),
-        MelOptFid('XEMI', 'emittance'),
-        MelFid('XMBR','multiBoundReference',),
-        MelNull('XIBS'),
-        MelOptFloat('XSCL', ('scale', 1.0)),
-        MelOptStruct('DATA','=6f',('posX',None),('posY',None),('posZ',None),('rotX',None),('rotY',None),('rotZ',None)),
+        MelOptFid(b'XEMI', u'ref_emittance'),
+        MelFid(b'XMBR', u'multi_bound_reference'),
+        MelBase(b'XIBS', u'ignored_by_sandbox_1'),
+        MelOptFloat(b'XSCL', (u'ref_scale', 1.0)),
+        MelRef3D(),
     )
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
 class MreActi(MelRecord):
     """Activator."""
-    classType = 'ACTI'
+    classType = b'ACTI'
 
     ActivatorFlags = Flags(0, Flags.getNames(
         (0, 'noDisplacement'),
@@ -1394,7 +1356,7 @@ class MreActi(MelRecord):
 #------------------------------------------------------------------------------
 class MreAddn(MelRecord):
     """Addon Node."""
-    classType = 'ADDN'
+    classType = b'ADDN'
 
     _AddnFlags = Flags(0, Flags.getNames(
         (1, 'alwaysLoaded'),
@@ -1414,7 +1376,7 @@ class MreAddn(MelRecord):
 #------------------------------------------------------------------------------
 class MreAlch(MelRecord,MreHasEffects):
     """Ingestible."""
-    classType = 'ALCH'
+    classType = b'ALCH'
 
     IngestibleFlags = Flags(0, Flags.getNames(
         (0, 'noAutoCalc'),
@@ -1436,8 +1398,9 @@ class MreAlch(MelRecord,MreHasEffects):
         MelOptFid('ZNAM', 'dropSound'),
         MelOptFid('ETYP', 'equipType'),
         MelFloat('DATA', 'weight'),
-        MelStruct('ENIT','i2IfI','value',(IngestibleFlags,'flags',0),
-                  'addiction','addictionChance','soundConsume',),
+        MelStruct(b'ENIT', u'i2IfI', u'value', (IngestibleFlags, u'flags'),
+                  (FID, u'addiction'), u'addictionChance',
+                  (FID, u'soundConsume')),
         MelEffects(),
     )
     __slots__ = melSet.getSlotsUsed()
@@ -1445,7 +1408,7 @@ class MreAlch(MelRecord,MreHasEffects):
 #------------------------------------------------------------------------------
 class MreAmmo(MelRecord):
     """Ammunition."""
-    classType = 'AMMO'
+    classType = b'AMMO'
 
     AmmoTypeFlags = Flags(0, Flags.getNames(
         (0, 'notNormalWeapon'),
@@ -1478,7 +1441,7 @@ class MreAmmo(MelRecord):
 #------------------------------------------------------------------------------
 class MreAnio(MelRecord):
     """Animated Object."""
-    classType = 'ANIO'
+    classType = b'ANIO'
     melSet = MelSet(
         MelEdid(),
         MelModel(),
@@ -1489,7 +1452,7 @@ class MreAnio(MelRecord):
 #------------------------------------------------------------------------------
 class MreAppa(MelRecord):
     """Alchemical Apparatus."""
-    classType = 'APPA'
+    classType = b'APPA'
 
     melSet = MelSet(
         MelEdid(),
@@ -1510,7 +1473,7 @@ class MreAppa(MelRecord):
 #------------------------------------------------------------------------------
 class MreArma(MelRecord):
     """Armor Addon."""
-    classType = 'ARMA'
+    classType = b'ARMA'
 
     WeightSliderFlags = Flags(0, Flags.getNames(
             (0, 'unknown0'),
@@ -1542,7 +1505,7 @@ class MreArma(MelRecord):
 #------------------------------------------------------------------------------
 class MreArmo(MelRecord):
     """Armor."""
-    classType = 'ARMO'
+    classType = b'ARMO'
 
     melSet = MelSet(
         MelEdid(),
@@ -1576,7 +1539,7 @@ class MreArmo(MelRecord):
 #------------------------------------------------------------------------------
 class MreArto(MelRecord):
     """Art Effect Object."""
-    classType = 'ARTO'
+    classType = b'ARTO'
 
     ArtoTypeFlags = Flags(0, Flags.getNames(
             (0, 'magic_casting'),
@@ -1595,7 +1558,7 @@ class MreArto(MelRecord):
 #------------------------------------------------------------------------------
 class MreAspc(MelRecord):
     """Acoustic Space."""
-    classType = 'ASPC'
+    classType = b'ASPC'
     melSet = MelSet(
         MelEdid(),
         MelBounds(),
@@ -1608,7 +1571,7 @@ class MreAspc(MelRecord):
 #------------------------------------------------------------------------------
 class MreAstp(MelRecord):
     """Association Type."""
-    classType = 'ASTP'
+    classType = b'ASTP'
 
     AstpTypeFlags = Flags(0, Flags.getNames('related'))
 
@@ -1625,7 +1588,7 @@ class MreAstp(MelRecord):
 #------------------------------------------------------------------------------
 class MreAvif(MelRecord):
     """Actor Value Information."""
-    classType = 'AVIF'
+    classType = b'AVIF'
 
     melSet = MelSet(
         MelEdid(),
@@ -1659,7 +1622,7 @@ class MreAvif(MelRecord):
 #------------------------------------------------------------------------------
 class MreBook(MelRecord):
     """Book."""
-    classType = 'BOOK'
+    classType = b'BOOK'
 
     _book_type_flags = Flags(0, Flags.getNames(
         'teaches_skill',
@@ -1700,7 +1663,7 @@ class MreBook(MelRecord):
 #------------------------------------------------------------------------------
 class MreBptd(MelRecord):
     """Body Part Data."""
-    classType = 'BPTD'
+    classType = b'BPTD'
 
     _flags = Flags(0, Flags.getNames('severable','ikData','ikBipedData',
         'explodable','ikIsHead','ikHeadtracking','toHitChanceAbsolute'))
@@ -1740,7 +1703,7 @@ class MreBptd(MelRecord):
 #------------------------------------------------------------------------------
 class MreCams(MelRecord):
     """Camera Shot."""
-    classType = 'CAMS'
+    classType = b'CAMS'
 
     CamsFlagsFlags = Flags(0, Flags.getNames(
             (0, 'positionFollowsLocation'),
@@ -1766,7 +1729,7 @@ class MreCams(MelRecord):
 #------------------------------------------------------------------------------
 class MreCell(MelRecord):
     """Cell."""
-    classType = 'CELL'
+    classType = b'CELL'
 
     CellDataFlags1 = Flags(0, Flags.getNames(
         (0,'isInterior'),
@@ -1804,27 +1767,6 @@ class MreCell(MelRecord):
         (3, 'quad4'),
     ))
 
-    class MelWaterHeight(MelOptFloat):
-        """XCLW sometimes has $FF7FFFFF and causes invalid floating point."""
-        default_heights = {4294953216.0, -2147483648.0,
-            -3.4028234663852886e+38, 3.4028234663852886e+38} # unused, see #302
-
-        def __init__(self):
-            MelOptFloat.__init__(self, 'XCLW', ('waterHeight', -2147483649))
-
-        def loadData(self, record, ins, sub_type, size_, readId):
-            # from brec.MelStruct#loadData - formatLen is 0 for MelWaterHeight
-            waterHeight = ins.unpack(self.format, size_, readId)
-            if not record.flags.isInterior: # drop interior cells for Skyrim
-                attr,value = self.attrs[0],waterHeight[0]
-                # if value in __default_heights:
-                #     value = 3.4028234663852886e+38 # normalize values
-                record.__setattr__(attr, value)
-
-        def dumpData(self,record,out):
-            if not record.flags.isInterior:
-                MelOptFloat.dumpData(self, record, out)
-
     melSet = MelSet(
         MelEdid(),
         MelFull(),
@@ -1858,15 +1800,21 @@ class MreCell(MelRecord):
         MelFid('LTMP','lightTemplate',),
         # leftover flags, they are now in XCLC
         MelBase('LNAM','unknown_LNAM'),
-        MelWaterHeight(),
+        MelUnion({ # see #302 for discussion on this
+            True:  MelNull(b'XCLW'), # Drop in interior cells for Skyrim
+            False: MelOptFloat(b'XCLW', (u'waterHeight', -2147483649)),
+        }, decider=FlagDecider(u'flags', u'isInterior')),
         MelString('XNAM','waterNoiseTexture'),
         MelFidList('XCLR','regions'),
         MelFid('XLCN','location',),
-        MelBase('XWCN','unknown_XWCN'), # leftover
-        MelBase('XWCS','unknown_XWCS'), # leftover
-        MelOptStruct('XWCU', '3f4s3f', ('xOffset', 0.0), ('yOffset', 0.0),
-                     ('zOffset', 0.0), ('unk1XWCU', null4), ('xAngle', 0.0),
-                     ('yAngle', 0.0), ('zAngle', 0.0), dumpExtra='unk2XWCU',),
+        # Old version of XWCN - replace with XWCN upon dumping
+        MelReadOnly(MelUInt32(b'XWCS', u'water_velocities_count')),
+        MelCounter(MelOptUInt32(b'XWCN', u'water_velocities_count'),
+                   counts=u'water_velocities'),
+        MelArray(u'water_velocities',
+            MelStruct(b'XWCU', u'4f', u'x_offset', u'y_offset', u'z_offset',
+                      u'unknown1'),
+        ),
         MelFid('XCWT','water'),
         MelOwnership(),
         MelFid('XILL','lockList',),
@@ -1882,7 +1830,7 @@ class MreCell(MelRecord):
 #------------------------------------------------------------------------------
 class MreClas(MelRecord):
     """Class."""
-    classType = 'CLAS'
+    classType = b'CLAS'
 
     melSet = MelSet(
         MelEdid(),
@@ -1908,7 +1856,7 @@ class MreClas(MelRecord):
 #------------------------------------------------------------------------------
 class MreClfm(MelRecord):
     """Color."""
-    classType = 'CLFM'
+    classType = b'CLFM'
 
     melSet = MelSet(
         MelEdid(),
@@ -1921,13 +1869,13 @@ class MreClfm(MelRecord):
 #------------------------------------------------------------------------------
 class MreClmt(MelRecord):
     """Climate."""
-    classType = 'CLMT'
+    classType = b'CLMT'
 
     melSet = MelSet(
         MelEdid(),
         MelArray('weatherTypes',
-            MelStruct('WLST', 'IiI', (FID, 'weather', None), 'chance',
-                      (FID, 'global', None)),
+            MelStruct(b'WLST', u'IiI', (FID, u'weather'), u'chance',
+                      (FID, u'global')),
         ),
         MelString('FNAM','sunPath',),
         MelString('GNAM','glarePath',),
@@ -1937,9 +1885,9 @@ class MreClmt(MelRecord):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-class MreCobj(MelRecord):
+class MreCobj(MreWithItems):
     """Constructible Object (Recipes)."""
-    classType = 'COBJ'
+    classType = b'COBJ'
     isKeyedByEid = True # NULL fids are acceptable
 
     melSet = MelSet(
@@ -1956,7 +1904,7 @@ class MreCobj(MelRecord):
 #------------------------------------------------------------------------------
 class MreColl(MelRecord):
     """Collision Layer."""
-    classType = 'COLL'
+    classType = b'COLL'
 
     CollisionLayerFlags = Flags(0, Flags.getNames(
         (0,'triggerVolume'),
@@ -1977,9 +1925,9 @@ class MreColl(MelRecord):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-class MreCont(MelRecord):
+class MreCont(MreWithItems):
     """Container."""
-    classType = 'CONT'
+    classType = b'CONT'
 
     ContTypeFlags = Flags(0, Flags.getNames(
         (0, 'allowSoundsWhenAnimation'),
@@ -2005,7 +1953,7 @@ class MreCont(MelRecord):
 #------------------------------------------------------------------------------
 class MreCpth(MelRecord):
     """Camera Path"""
-    classType = 'CPTH'
+    classType = b'CPTH'
 
     melSet = MelSet(
         MelEdid(),
@@ -2019,7 +1967,7 @@ class MreCpth(MelRecord):
 #------------------------------------------------------------------------------
 class MreCsty(MelRecord):
     """Combat Style."""
-    classType = 'CSTY'
+    classType = b'CSTY'
 
     CstyTypeFlags = Flags(0, Flags.getNames(
         (0, 'dueling'),
@@ -2047,7 +1995,7 @@ class MreCsty(MelRecord):
 #------------------------------------------------------------------------------
 class MreDebr(MelRecord):
     """Debris."""
-    classType = 'DEBR'
+    classType = b'DEBR'
 
     dataFlags = Flags(0, Flags.getNames('hasCollissionData'))
 
@@ -2085,7 +2033,7 @@ class MreDebr(MelRecord):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-class MreDial(brec.MreDial):
+class MreDial(MreDialBase):
     """Dialogue."""
 
     DialTopicFlags = Flags(0, Flags.getNames(
@@ -2110,7 +2058,7 @@ class MreDial(brec.MreDial):
 #------------------------------------------------------------------------------
 class MreDlbr(MelRecord):
     """Dialog Branch."""
-    classType = 'DLBR'
+    classType = b'DLBR'
 
     DialogBranchFlags = Flags(0, Flags.getNames(
         (0,'topLevel'),
@@ -2130,7 +2078,7 @@ class MreDlbr(MelRecord):
 #------------------------------------------------------------------------------
 class MreDlvw(MelRecord):
     """Dialog View"""
-    classType = 'DLVW'
+    classType = b'DLVW'
 
     melSet = MelSet(
         MelEdid(),
@@ -2147,7 +2095,7 @@ class MreDlvw(MelRecord):
 #------------------------------------------------------------------------------
 class MreDobj(MelRecord):
     """Default Object Manager."""
-    classType = 'DOBJ'
+    classType = b'DOBJ'
 
     class MelDobjDnam(MelArray):
         """This DNAM can have < 8 bytes of noise at the end, so store those
@@ -2160,25 +2108,15 @@ class MreDobj(MelRecord):
         def loadData(self, record, ins, sub_type, size_, readId):
             # Load everything but the noise
             start_pos = ins.tell()
-            MelArray.loadData(self, record, ins, sub_type, size_, readId)
+            super(MreDobj.MelDobjDnam, self).loadData(record, ins, sub_type,
+                                                      size_, readId)
             # Now, read the remainder of the subrecord and store it
             read_size = ins.tell() - start_pos
             record.unknownDNAM = ins.read(size_ - read_size)
 
-        def dumpData(self, record, out):
-            # We need to fully override this to attach unknownDNAM to the data
-            # we'll be writing out
-            array_val = getattr(record, self.attr)
-            if not array_val: return # don't dump out empty arrays
-            array_data = ''
-            element_fmt = self._element.format
-            # not _element_attrs, that one has all underscores removed
-            element_attrs = self._element.attrs
-            for arr_entry in array_val:
-                array_data += struct_pack(
-                    element_fmt, *[getattr(arr_entry, item) for item
-                                   in element_attrs])
-            out.packSub(self.subType, array_data + record.unknownDNAM)
+        def _collect_array_data(self, record):
+            return super(MreDobj.MelDobjDnam, self)._collect_array_data(
+                record) + record.unknownDNAM
 
         def getSlotsUsed(self):
             return MelArray.getSlotsUsed(self) + ('unknownDNAM',)
@@ -2192,7 +2130,7 @@ class MreDobj(MelRecord):
 #------------------------------------------------------------------------------
 class MreDoor(MelRecord):
     """Door."""
-    classType = 'DOOR'
+    classType = b'DOOR'
 
     DoorTypeFlags = Flags(0, Flags.getNames(
         (1, 'automatic'),
@@ -2219,7 +2157,7 @@ class MreDoor(MelRecord):
 #------------------------------------------------------------------------------
 class MreDual(MelRecord):
     """Dual Cast Data."""
-    classType = 'DUAL'
+    classType = b'DUAL'
 
     DualCastDataFlags = Flags(0, Flags.getNames(
         (0,'hitEffectArt'),
@@ -2238,7 +2176,7 @@ class MreDual(MelRecord):
 #------------------------------------------------------------------------------
 class MreEczn(MelRecord):
     """Encounter Zone."""
-    classType = 'ECZN'
+    classType = b'ECZN'
 
     EcznTypeFlags = Flags(0, Flags.getNames(
             (0, 'neverResets'),
@@ -2248,8 +2186,8 @@ class MreEczn(MelRecord):
 
     melSet = MelSet(
         MelEdid(),
-        MelTruncatedStruct('DATA', '2I2bBb', (FID, 'owner', None),
-                           (FID, 'location', None), ('rank', 0),
+        MelTruncatedStruct(b'DATA', u'2I2bBb', (FID, u'owner'),
+                           (FID, u'location'), u'rank',
                            ('minimumLevel', 0), (EcznTypeFlags, 'flags', 0),
                            ('maxLevel', 0), old_versions={'2I'}),
     )
@@ -2258,7 +2196,7 @@ class MreEczn(MelRecord):
 #------------------------------------------------------------------------------
 class MreEfsh(MelRecord):
     """Effect Shader."""
-    classType = 'EFSH'
+    classType = b'EFSH'
 
     EfshGeneralFlags = Flags(0, Flags.getNames(
         (0, 'noMembraneShader'),
@@ -2342,7 +2280,7 @@ class MreEfsh(MelRecord):
 #------------------------------------------------------------------------------
 class MreEnch(MelRecord,MreHasEffects):
     """Object Effect."""
-    classType = 'ENCH'
+    classType = b'ENCH'
 
     EnchGeneralFlags = Flags(0, Flags.getNames(
         (0, 'noAutoCalc'),
@@ -2367,7 +2305,7 @@ class MreEnch(MelRecord,MreHasEffects):
 #------------------------------------------------------------------------------
 class MreEqup(MelRecord):
     """Equip Type."""
-    classType = 'EQUP'
+    classType = b'EQUP'
     melSet = MelSet(
         MelEdid(),
         MelFidList('PNAM','canBeEquipped'),
@@ -2378,7 +2316,7 @@ class MreEqup(MelRecord):
 #------------------------------------------------------------------------------
 class MreExpl(MelRecord):
     """Explosion."""
-    classType = 'EXPL'
+    classType = b'EXPL'
 
     ExplTypeFlags = Flags(0, Flags.getNames(
         (1, 'alwaysUsesWorldOrientation'),
@@ -2399,19 +2337,19 @@ class MreExpl(MelRecord):
         MelFid('EITM','objectEffect'),
         MelFid('MNAM','imageSpaceModifier'),
         MelTruncatedStruct(
-            'DATA', '6I5f2I', (FID, 'light', None), (FID, 'sound1', None),
-            (FID, 'sound2', None), (FID, 'impactDataset', None),
-            (FID, 'placedObject', None), (FID, 'spawnProjectile', None),
-            'force', 'damage', 'radius', 'isRadius', 'verticalOffsetMult',
-            (ExplTypeFlags, 'flags', 0), 'soundLevel',
-            old_versions={'6I5fI', '6I5f', '6I4f'}),
+            b'DATA', u'6I5f2I', (FID, u'light'), (FID, u'sound1'),
+            (FID, u'sound2'), (FID, u'impactDataset'),
+            (FID, u'placedObject'), (FID, u'spawnProjectile'),
+            u'force', u'damage', u'radius', u'isRadius', u'verticalOffsetMult',
+            (ExplTypeFlags, u'flags'), u'soundLevel',
+            old_versions={u'6I5fI', u'6I5f', u'6I4f'}),
     )
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
 class MreEyes(MelRecord):
     """Eyes."""
-    classType = 'EYES'
+    classType = b'EYES'
 
     EyesTypeFlags = Flags(0, Flags.getNames(
             (0, 'playable'),
@@ -2430,78 +2368,59 @@ class MreEyes(MelRecord):
 #------------------------------------------------------------------------------
 class MreFact(MelRecord):
     """Faction."""
-    classType = 'FACT'
+    classType = b'FACT'
 
-    FactGeneralTypeFlags = Flags(0, Flags.getNames(
-        (0, 'hiddenFromPC'),
-        (1, 'specialCombat'),
-        (2, 'unknown3'),
-        (3, 'unknown4'),
-        (4, 'unknown5'),
-        (5, 'unknown6'),
-        (6, 'trackCrime'),
-        (7, 'ignoreCrimesMurder'),
-        (8, 'ignoreCrimesAssult'),
-        (9, 'ignoreCrimesStealing'),
-        (10, 'ignoreCrimesTrespass'),
-        (11, 'doNotReportCrimesAgainstMembers'),
-        (12, 'crimeGold-UseDefaults'),
-        (13, 'ignoreCrimesPickpocket'),
-        (14, 'allowSell'), # vendor
-        (15, 'canBeOwner'),
-        (16, 'ignoreCrimesWerewolf'),
+    _general_flags = Flags(0, Flags.getNames(
+        ( 0, u'hidden_from_pc'),
+        ( 1, u'special_combat'),
+        ( 6, u'track_crime'),
+        ( 7, u'ignore_crimes_murder'),
+        ( 8, u'ignore_crimes_assault'),
+        ( 9, u'ignore_crimes_stealing'),
+        (10, u'ignore_crimes_trespass'),
+        (11, u'do_not_report_crimes_against_members'),
+        (12, u'crime_gold_use_defaults'),
+        (13, u'ignore_crimes_pickpocket'),
+        (14, u'allow_sell'), # vendor
+        (15, u'can_be_owner'),
+        (16, u'ignore_crimes_werewolf'),
     ))
-
-#   wbPLVD := wbStruct(PLVD, 'Location', [
-#     wbInteger('Type', itS32, wbLocationEnum),
-#     wbUnion('Location Value', wbTypeDecider, [
-#       {0} wbFormIDCkNoReach('Reference', [NULL, DOOR, PLYR, ACHR, REFR, PGRE, PHZD, PARW, PBAR, PBEA, PCON, PFLA]),
-#       {1} wbFormIDCkNoReach('Cell', [NULL, CELL]),
-#       {2} wbByteArray('Near Package Start Location', 4, cpIgnore),
-#       {3} wbByteArray('Near Editor Location', 4, cpIgnore),
-#       {4} wbFormIDCkNoReach('Object ID', [NULL, ACTI, DOOR, STAT, FURN, SPEL, SCRL, NPC_, CONT, ARMO, AMMO, MISC, WEAP, BOOK, KEYM, ALCH, INGR, LIGH, FACT, FLST, IDLM, SHOU]),
-#       {5} wbInteger('Object Type', itU32, wbObjectTypeEnum),
-#       {6} wbFormIDCk('Keyword', [NULL, KYWD]),
-#       {7} wbByteArray('Unknown', 4, cpIgnore),
-#       {8} wbInteger('Alias ID', itU32),
-#       {9} wbFormIDCkNoReach('Reference', [NULL, DOOR, PLYR, ACHR, REFR, PGRE, PHZD, PARW, PBAR, PBEA, PCON, PFLA]),
-#      {10} wbByteArray('Unknown', 4, cpIgnore),
-#      {11} wbByteArray('Unknown', 4, cpIgnore),
-#      {12} wbByteArray('Unknown', 4, cpIgnore)
-#     ]),
-#     wbInteger('Radius', itS32)
-#   ]);
 
     melSet = MelSet(
         MelEdid(),
         MelFull(),
-        MelGroups('relations',
-            MelStruct('XNAM', 'IiI', (FID, 'faction'), 'mod',
-                      'groupCombatReaction'),
+        MelGroups(u'relations',
+            MelStruct(b'XNAM', u'IiI', (FID, u'faction'), u'mod',
+                      u'group_combat_reaction'),
         ),
-        MelUInt32('DATA', (FactGeneralTypeFlags, 'flags', 0)),
-        MelFid('JAIL','exteriorJailMarker'),
-        MelFid('WAIT','followerWaitMarker'),
-        MelFid('STOL','stolenGoodsContainer'),
-        MelFid('PLCN','playerInventoryContainer'),
-        MelFid('CRGR','sharedCrimeFactionList'),
-        MelFid('JOUT','jailOutfit'),
-        # 'arrest' and 'attackOnSight' are actually bools
-        MelTruncatedStruct('CRVA', '2B5Hf2H', 'arrest', 'attackOnSight',
-                           'murder', 'assult', 'trespass', 'pickpocket',
-                           'unknown', 'stealMultiplier', 'escape', 'werewolf',
-                           old_versions={'2B5Hf', '2B5H'}),
-        MelGroups('ranks',
-            MelUInt32('RNAM', 'rank'),
-            MelLString('MNAM','maleTitle'),
-            MelLString('FNAM','femaleTitle'),
-            MelString('INAM','insigniaPath'),
+        MelUInt32(b'DATA', (_general_flags, u'general_flags')),
+        MelFid(b'JAIL', u'exterior_jail_marker'),
+        MelFid(b'WAIT', u'follower_wait_marker'),
+        MelFid(b'STOL', u'stolen_goods_container'),
+        MelFid(b'PLCN', u'player_inventory_container'),
+        MelFid(b'CRGR', u'shared_crime_faction_list'),
+        MelFid(b'JOUT', u'jail_outfit'),
+        # 'cv_arrest' and 'cv_attack_on_sight' are actually bools, cv means
+        # 'crime value' (which is what this struct is about)
+        MelTruncatedStruct(B'CRVA', u'2B5Hf2H', u'cv_arrest',
+                           u'cv_attack_on_sight', u'cv_murder', u'cv_assault',
+                           u'cv_trespass', u'cv_pickpocket',
+                           u'cv_unknown', u'cv_steal_multiplier', u'cv_escape',
+                           u'cv_werewolf', old_versions={u'2B5Hf', u'2B5H'}),
+        MelGroups(u'ranks',
+            MelUInt32(b'RNAM', u'rank_level'),
+            MelLString(b'MNAM', u'male_title'),
+            MelLString(b'FNAM', u'female_title'),
+            MelString(b'INAM', u'insignia_path'),
         ),
-        MelFid('VEND','vendorBuySellList'),
-        MelFid('VENC','merchantContainer'),
-        MelStruct('VENV','3H2s2B2s','startHour','endHour','radius','unknownOne',
-                  'onlyBuysStolenItems','notSellBuy','UnknownTwo'),
-        MelOptStruct('PLVD','iIi','type',(FID,'locationValue'),'radius',),
+        MelFid(b'VEND', u'vendor_buy_sell_list'),
+        MelFid(b'VENC', u'merchant_container'),
+        # 'vv_only_buys_stolen_items' and 'vv_not_sell_buy' are actually bools,
+        # vv means 'vendor value' (which is what this struct is about)
+        MelStruct(b'VENV', u'3H2s2B2s', u'vv_start_hour', u'vv_end_hour',
+                  u'vv_radius', u'vv_unknown1', u'vv_only_buys_stolen_items',
+                  u'vv_not_sell_buy', u'vv_unknown2'),
+        MelLocation(b'PLVD'),
         MelConditionCounter(),
         MelConditions(),
     )
@@ -2510,7 +2429,7 @@ class MreFact(MelRecord):
 #------------------------------------------------------------------------------
 class MreFlor(MelRecord):
     """Flora."""
-    classType = 'FLOR'
+    classType = b'FLOR'
 
     melSet = MelSet(
         MelEdid(),
@@ -2530,86 +2449,9 @@ class MreFlor(MelRecord):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-class MreFlst(MelRecord):
-    """FormID List."""
-    classType = 'FLST'
-
-    melSet = MelSet(
-        MelEdid(),
-        MelFids('LNAM','formIDInList'),
-    )
-    __slots__ = melSet.getSlotsUsed() + ['mergeOverLast', 'mergeSources',
-                                         'items', 'de_records', 're_records']
-
-    """ Skyrim's FLST can't always be merged if a mod depends on the order of
-    the LNAM records for the Papyrus scripts.
-
-    Solution: Create a Bash tag that indicates when a list cannot be merged.
-    If even one mod has this tag then the list is not merged into the
-    Bash Patch."""
-
-    # The same with Relev, Delev the 'NoFlstMerge' tag applies to the entire mod
-    # even if only one FLST requires it.  When parsing the FLSTs from other mods
-    # Wrye Bash should skip any FLST from a mod with the 'NoFlstMerge' tag.
-    # Example, ModA has 10 FLST, MODB has 11 FLST.  Ten of the lists are the same
-    # Between the two mods.  Since only one list is different, only one FLST is
-    # different then only one FLST would be mergable.
-
-    # New Bash Tag 'NoFlstMerge'
-    def __init__(self, header, ins=None, do_unpack=False):
-        MelRecord.__init__(self, header, ins, do_unpack)
-        self.mergeOverLast = False #--Merge overrides last mod merged
-        self.mergeSources = None #--Set to list by other functions
-        self.items  = None #--Set of items included in list
-        #--Set of items deleted by list (Deflst mods) unused for Skyrim
-        self.de_records = None
-        self.re_records = None # unused, needed by patcher - TODO base class
-
-    def mergeFilter(self,modSet):
-        """Filter out items that don't come from specified modSet."""
-        if not self.longFids: raise StateError(_("Fids not in long format"))
-        self.formIDInList = [fid for fid in self.formIDInList if fid[0] in modSet]
-
-    def mergeWith(self,other,otherMod):
-        """Merges newLevl settings and entries with self.
-        Requires that: self.items, other.de_records be defined."""
-        if not self.longFids: raise StateError(_("Fids not in long format"))
-        if not other.longFids: raise StateError(_("Fids not in long format"))
-        #--Remove items based on other.removes
-        if other.de_records:
-            removeItems = self.items & other.de_records
-            self.formIDInList = [fid for fid in self.formIDInList if fid not in removeItems]
-            self.items = (self.items | other.de_records)
-        #--Add new items from other
-        newItems = set()
-        formIDInListAppend = self.formIDInList.append
-        newItemsAdd = newItems.add
-        for fid in other.formIDInList:
-            if fid not in self.items:
-                formIDInListAppend(fid)
-                newItemsAdd(fid)
-        if newItems:
-            self.items |= newItems
-        #--Is merged list different from other? (And thus written to patch.)
-        if len(self.formIDInList) != len(other.formIDInList):
-            self.mergeOverLast = True
-        else:
-            for selfEntry,otherEntry in zip(self.formIDInList,other.formIDInList):
-                if selfEntry != otherEntry:
-                    self.mergeOverLast = True
-                    break
-            else:
-                self.mergeOverLast = False
-        if self.mergeOverLast:
-            self.mergeSources.append(otherMod)
-        else:
-            self.mergeSources = [otherMod]
-        self.setChanged()
-
-#------------------------------------------------------------------------------
 class MreFstp(MelRecord):
     """Footstep."""
-    classType = 'FSTP'
+    classType = b'FSTP'
 
     melSet = MelSet(
         MelEdid(),
@@ -2621,7 +2463,7 @@ class MreFstp(MelRecord):
 #------------------------------------------------------------------------------
 class MreFsts(MelRecord):
     """Footstep Set."""
-    classType = 'FSTS'
+    classType = b'FSTS'
 
     melSet = MelSet(
         MelEdid(),
@@ -2634,7 +2476,7 @@ class MreFsts(MelRecord):
 #------------------------------------------------------------------------------
 class MreFurn(MelRecord):
     """Furniture."""
-    classType = 'FURN'
+    classType = b'FURN'
 
     FurnGeneralFlags = Flags(0, Flags.getNames(
         (1, 'ignoredBySandbox'),
@@ -2692,28 +2534,25 @@ class MreFurn(MelRecord):
         MelDestructible(),
         MelKeywords(),
         MelBase('PNAM','pnam_p'),
-        MelUInt16('FNAM', (FurnGeneralFlags, 'general_f', None)),
+        MelUInt16(b'FNAM', (FurnGeneralFlags, u'general_f')),
         MelFid('KNAM','interactionKeyword'),
-        MelUInt32('MNAM', (FurnActiveMarkerFlags, 'activeMarkers', None)),
+        MelUInt32(b'MNAM', (FurnActiveMarkerFlags, u'activeMarkers')),
         MelStruct('WBDT','Bb','benchType','usesSkill',),
         MelFid('NAM1','associatedSpell'),
         MelGroups('markers',
             MelUInt32('ENAM', 'markerIndex',),
-            MelStruct('NAM0','2sH','unknown',(MarkerEntryPointFlags,'disabledPoints_f',None),),
+            MelStruct(b'NAM0', u'2sH', u'unknown1',
+                      (MarkerEntryPointFlags, u'disabledPoints_f')),
             MelFid('FNMK','markerKeyword',),
         ),
         MelGroups('entryPoints',
-            MelStruct('FNPR', '2H', 'markerType',
-                      (MarkerEntryPointFlags, 'entryPointsFlags', None)),
+            MelStruct(b'FNPR', u'2H', u'markerType',
+                      (MarkerEntryPointFlags, u'entryPointsFlags')),
         ),
         MelString('XMRK','modelFilename'),
     )
     __slots__ = melSet.getSlotsUsed()
 
-#------------------------------------------------------------------------------
-# Marker for organization please don't remove ---------------------------------
-# GLOB ------------------------------------------------------------------------
-# Defined in brec.py as class MreGlob(MelRecord) ------------------------------
 #------------------------------------------------------------------------------
 class MreGmst(MreGmstBase):
     """Game Setting."""
@@ -2722,7 +2561,7 @@ class MreGmst(MreGmstBase):
 #------------------------------------------------------------------------------
 class MreGras(MelRecord):
     """Grass."""
-    classType = 'GRAS'
+    classType = b'GRAS'
 
     GrasTypeFlags = Flags(0, Flags.getNames(
             (0, 'vertexLighting'),
@@ -2745,7 +2584,7 @@ class MreGras(MelRecord):
 #------------------------------------------------------------------------------
 class MreHazd(MelRecord):
     """Hazard."""
-    classType = 'HAZD'
+    classType = b'HAZD'
 
     HazdTypeFlags = Flags(0, Flags.getNames(
         (0, 'affectsPlayerOnly'),
@@ -2770,7 +2609,7 @@ class MreHazd(MelRecord):
 #------------------------------------------------------------------------------
 class MreHdpt(MelRecord):
     """Head Part."""
-    classType = 'HDPT'
+    classType = b'HDPT'
 
     HdptTypeFlags = Flags(0, Flags.getNames(
         (0, 'playable'),
@@ -2800,7 +2639,7 @@ class MreHdpt(MelRecord):
 #------------------------------------------------------------------------------
 class MreIdle(MelRecord):
     """Idle Animation."""
-    classType = 'IDLE'
+    classType = b'IDLE'
 
     IdleTypeFlags = Flags(0, Flags.getNames(
             (0, 'parent'),
@@ -2825,7 +2664,7 @@ class MreIdle(MelRecord):
 #------------------------------------------------------------------------------
 class MreIdlm(MelRecord):
     """Idle Marker."""
-    classType = 'IDLM'
+    classType = b'IDLM'
 
     IdlmTypeFlags = Flags(0, Flags.getNames(
         (0, 'runInSequence'),
@@ -2849,7 +2688,7 @@ class MreIdlm(MelRecord):
 #------------------------------------------------------------------------------
 class MreInfo(MelRecord):
     """Dialog Response."""
-    classType = 'INFO'
+    classType = b'INFO'
 
     _InfoResponsesFlags = Flags(0, Flags.getNames(
             (0, 'useEmotionAnimation'),
@@ -2885,11 +2724,11 @@ class MreInfo(MelRecord):
         MelFids('TCLT','linkTo',),
         MelFid('DNAM','responseData',),
         MelGroups('responses',
-            MelStruct('TRDT', '2I4sB3sIB3s', 'emotionType', 'emotionValue',
-                      ('unused1', null4), 'responseNumber', ('unused2', null3),
-                      (FID, 'sound', None),
-                      (_InfoResponsesFlags, 'responseFlags', 0),
-                      ('unused3', null3),),
+            MelStruct(b'TRDT', u'2I4sB3sIB3s', u'emotionType', u'emotionValue',
+                      (u'unused1', null4), u'responseNumber',
+                      (u'unused2', null3), (FID, u'sound'),
+                      (_InfoResponsesFlags, u'responseFlags'),
+                      (u'unused3', null3)),
             MelLString('NAM1','responseText'),
             MelString('NAM2','scriptNotes'),
             MelString('NAM3','edits'),
@@ -2912,7 +2751,7 @@ class MreInfo(MelRecord):
 #------------------------------------------------------------------------------
 class MreImad(MelRecord):
     """Image Space Adapter."""
-    classType = 'IMAD'
+    classType = b'IMAD'
 
     _ImadDofFlags = Flags(0, Flags.getNames(
         (0, 'useTarget'),
@@ -3021,7 +2860,7 @@ class MreImad(MelRecord):
 #------------------------------------------------------------------------------
 class MreImgs(MelRecord):
     """Image Space."""
-    classType = 'IMGS'
+    classType = b'IMGS'
 
     melSet = MelSet(
         MelEdid(),
@@ -3039,7 +2878,7 @@ class MreImgs(MelRecord):
 #------------------------------------------------------------------------------
 class MreIngr(MelRecord,MreHasEffects):
     """Ingredient."""
-    classType = 'INGR'
+    classType = b'INGR'
 
     IngrTypeFlags = Flags(0,  Flags.getNames(
         (0, 'no_auto_calc'),
@@ -3067,7 +2906,7 @@ class MreIngr(MelRecord,MreHasEffects):
 #------------------------------------------------------------------------------
 class MreIpct(MelRecord):
     """Impact."""
-    classType = 'IPCT'
+    classType = b'IPCT'
 
     _IpctTypeFlags = Flags(0, Flags.getNames('noDecalData'))
 
@@ -3091,7 +2930,7 @@ class MreIpct(MelRecord):
 #------------------------------------------------------------------------------
 class MreIpds(MelRecord):
     """Impact Dataset."""
-    classType = 'IPDS'
+    classType = b'IPDS'
 
     melSet = MelSet(
         MelEdid(),
@@ -3104,7 +2943,7 @@ class MreIpds(MelRecord):
 #------------------------------------------------------------------------------
 class MreKeym(MelRecord):
     """Key."""
-    classType = 'KEYM'
+    classType = b'KEYM'
 
     melSet = MelSet(
         MelEdid(),
@@ -3124,7 +2963,7 @@ class MreKeym(MelRecord):
 #------------------------------------------------------------------------------
 class MreKywd(MelRecord):
     """Keyword record."""
-    classType = 'KYWD'
+    classType = b'KYWD'
 
     melSet = MelSet(
         MelEdid(),
@@ -3135,7 +2974,7 @@ class MreKywd(MelRecord):
 #------------------------------------------------------------------------------
 class MreLcrt(MelRecord):
     """Location Reference Type."""
-    classType = 'LCRT'
+    classType = b'LCRT'
 
     melSet = MelSet(
         MelEdid(),
@@ -3146,7 +2985,7 @@ class MreLcrt(MelRecord):
 #------------------------------------------------------------------------------
 class MreLctn(MelRecord):
     """Location"""
-    classType = 'LCTN'
+    classType = b'LCTN'
 
     melSet = MelSet(
         MelEdid(),
@@ -3177,14 +3016,23 @@ class MreLctn(MelRecord):
                       (FID, 'location'), 'gridX', 'gridY'),
         ),
         MelFidList('RCSR','referenceCellStaticReference',),
-        MelGroups('actorCellEncounterCell',
-            MelStruct('ACEC', 'I', (FID,'actor'), dumpExtra='gridsXY'),
+        MelGroups(u'actorCellEncounterCell',
+            MelArray(u'coordinates',
+                MelStruct(b'ACEC', u'2h', u'grid_x', u'grid_y'),
+                     prelude=MelFid(b'ACEC', u'location'),
+            ),
         ),
-        MelGroups('locationCellEncounterCell',
-            MelStruct('LCEC', 'I', (FID,'actor'), dumpExtra='gridsXY'),
+        MelGroups(u'locationCellEncounterCell',
+            MelArray(u'coordinates',
+                MelStruct(b'LCEC', u'2h', u'grid_x', u'grid_y'),
+                     prelude=MelFid(b'LCEC', u'location'),
+            ),
         ),
-        MelGroups('referenceCellEncounterCell',
-            MelStruct('RCEC', 'I', (FID,'actor'), dumpExtra='gridsXY'),
+        MelGroups(u'referenceCellEncounterCell',
+            MelArray(u'coordinates',
+                MelStruct(b'RCEC', u'2h', u'grid_x', u'grid_y'),
+                     prelude=MelFid(b'RCEC', u'location'),
+            ),
         ),
         MelFidList('ACID','actorCellMarkerReference',),
         MelFidList('LCID','locationCellMarkerReference',),
@@ -3211,18 +3059,18 @@ class MreLctn(MelRecord):
 #------------------------------------------------------------------------------
 class MreLgtm(MelRecord):
     """Lighting Template."""
-    classType = 'LGTM'
+    classType = b'LGTM'
 
     class MelLgtmData(MelStruct):
         """Older format skips 8 bytes in the middle and has the same unpacked
         length, so we can't use MelTruncatedStruct."""
-        def loadData(self, record, ins, sub_type, size_, readId):
+        def loadData(self, record, ins, sub_type, size_, readId,
+            __unpacker=struct.Struct(u'3Bs3Bs3Bs2f2i3f24s3Bs3f4s').unpack):
             if size_ == 92:
                 MelStruct.loadData(self, record, ins, sub_type, size_, readId)
                 return
             elif size_ == 84:
-                unpacked_val = ins.unpack('3Bs3Bs3Bs2f2i3f24s3Bs3f4s', size_,
-                                          readId)
+                unpacked_val = ins.unpack(__unpacker, size_, readId)
                 # Pad it with 8 null bytes in the middle
                 unpacked_val = (unpacked_val[:19]
                                 + (unpacked_val[19] + null4 * 2,)
@@ -3260,7 +3108,7 @@ class MreLgtm(MelRecord):
 #------------------------------------------------------------------------------
 class MreLigh(MelRecord):
     """Light."""
-    classType = 'LIGH'
+    classType = b'LIGH'
 
     LighTypeFlags = Flags(0, Flags.getNames(
             (0, 'dynamic'),
@@ -3292,7 +3140,8 @@ class MreLigh(MelRecord):
                   'unknown',(LighTypeFlags,'flags',0),'falloffExponent','fov',
                   'nearClip','fePeriod','feIntensityAmplitude',
                   'feMovementAmplitude','value','weight',),
-        MelFloat('FNAM', 'fade'),
+        # None here is on purpose! See AssortedTweak_LightFadeValueFix
+        MelOptFloat(b'FNAM', (u'fade', None)),
         MelFid('SNAM','sound'),
     )
     __slots__ = melSet.getSlotsUsed()
@@ -3300,7 +3149,7 @@ class MreLigh(MelRecord):
 #------------------------------------------------------------------------------
 class MreLscr(MelRecord):
     """Load Screen."""
-    classType = 'LSCR'
+    classType = b'LSCR'
 
     melSet = MelSet(
         MelEdid(),
@@ -3319,7 +3168,7 @@ class MreLscr(MelRecord):
 #------------------------------------------------------------------------------
 class MreLtex(MelRecord):
     """Landscape Texture."""
-    classType = 'LTEX'
+    classType = b'LTEX'
 
     _SnowFlags = Flags(0, Flags.getNames(
         'considered_snow',
@@ -3345,20 +3194,21 @@ class MreLeveledList(MreLeveledListBase):
     class MelLlct(MelCounter):
         def __init__(self):
             MelCounter.__init__(
-                self, MelUInt8('LLCT', 'entry_count'), counts='entries')
+                self, MelUInt8(b'LLCT', u'entry_count'), counts=u'entries')
 
     class MelLvlo(MelGroups):
         def __init__(self):
-            MelGroups.__init__(self,'entries',
-                MelStruct('LVLO','=HHIHH','level',('unknown1',null2),
-                          (FID,'listId',None),('count',1),('unknown2',null2)),
+            MelGroups.__init__(self, u'entries',
+                MelStruct(b'LVLO', u'2HI2H', u'level', (u'unknown1', null2),
+                          (FID, u'listId'), (u'count', 1),
+                          (u'unknown2', null2)),
                 MelCoed(),
             )
 
 #------------------------------------------------------------------------------
 class MreLvli(MreLeveledList):
     """Leveled Item."""
-    classType = 'LVLI'
+    classType = b'LVLI'
     top_copy_attrs = ('chanceNone','glob',)
 
     melSet = MelSet(
@@ -3375,7 +3225,7 @@ class MreLvli(MreLeveledList):
 #------------------------------------------------------------------------------
 class MreLvln(MreLeveledList):
     """Leveled NPC."""
-    classType = 'LVLN'
+    classType = b'LVLN'
     top_copy_attrs = ('chanceNone','model','modt_p',)
 
     melSet = MelSet(
@@ -3394,7 +3244,7 @@ class MreLvln(MreLeveledList):
 #------------------------------------------------------------------------------
 class MreLvsp(MreLeveledList):
     """Leveled Spell."""
-    classType = 'LVSP'
+    classType = b'LVSP'
 
     top_copy_attrs = ('chanceNone',)
 
@@ -3411,7 +3261,7 @@ class MreLvsp(MreLeveledList):
 #------------------------------------------------------------------------------
 class MreMato(MelRecord):
     """Material Object."""
-    classType = 'MATO'
+    classType = b'MATO'
 
     _MatoTypeFlags = Flags(0, Flags.getNames(
         'singlePass',
@@ -3448,7 +3298,7 @@ class MreMato(MelRecord):
 #------------------------------------------------------------------------------
 class MreMatt(MelRecord):
     """Material Type."""
-    classType = 'MATT'
+    classType = b'MATT'
 
     MattTypeFlags = Flags(0, Flags.getNames(
             (0, 'stairMaterial'),
@@ -3469,7 +3319,7 @@ class MreMatt(MelRecord):
 #------------------------------------------------------------------------------
 class MreMesg(MelRecord):
     """Message."""
-    classType = 'MESG'
+    classType = b'MESG'
 
     MesgTypeFlags = Flags(0, Flags.getNames(
             (0, 'messageBox'),
@@ -3494,7 +3344,7 @@ class MreMesg(MelRecord):
 #------------------------------------------------------------------------------
 class MreMgef(MelRecord):
     """Magic Effect."""
-    classType = 'MGEF'
+    classType = b'MGEF'
 
     MgefGeneralFlags = Flags(0, Flags.getNames(
             (0, 'hostile'),
@@ -3566,7 +3416,7 @@ class MreMgef(MelRecord):
 #------------------------------------------------------------------------------
 class MreMisc(MelRecord):
     """Misc. Item."""
-    classType = 'MISC'
+    classType = b'MISC'
 
     melSet = MelSet(
         MelEdid(),
@@ -3586,7 +3436,7 @@ class MreMisc(MelRecord):
 #------------------------------------------------------------------------------
 class MreMovt(MelRecord):
     """Movement Type."""
-    classType = 'MOVT'
+    classType = b'MOVT'
 
     melSet = MelSet(
         MelEdid(),
@@ -3602,7 +3452,7 @@ class MreMovt(MelRecord):
 #------------------------------------------------------------------------------
 class MreMstt(MelRecord):
     """Moveable Static."""
-    classType = 'MSTT'
+    classType = b'MSTT'
 
     MsttTypeFlags = Flags(0, Flags.getNames(
         (0, 'onLocalMap'),
@@ -3623,7 +3473,7 @@ class MreMstt(MelRecord):
 #------------------------------------------------------------------------------
 class MreMusc(MelRecord):
     """Music Type."""
-    classType = 'MUSC'
+    classType = b'MUSC'
 
     MuscTypeFlags = Flags(0, Flags.getNames(
             (0,'playsOneSelection'),
@@ -3647,7 +3497,7 @@ class MreMusc(MelRecord):
 #------------------------------------------------------------------------------
 class MreMust(MelRecord):
     """Music Track."""
-    classType = 'MUST'
+    classType = b'MUST'
 
     melSet = MelSet(
         MelEdid(),
@@ -3670,7 +3520,7 @@ class MreMust(MelRecord):
 # Not Mergable - FormIDs unaccounted for
 class MreNavi(MelRecord):
     """Navigation Mesh Info Map."""
-    classType = 'NAVI'
+    classType = b'NAVI'
 
     melSet = MelSet(
         MelEdid(),
@@ -3687,7 +3537,7 @@ class MreNavi(MelRecord):
 # Not Mergable - FormIDs unaccounted for
 class MreNavm(MelRecord):
     """Navigation Mesh."""
-    classType = 'NAVM'
+    classType = b'NAVM'
 
     NavmTrianglesFlags = Flags(0, Flags.getNames(
             (0, 'edge01link'),
@@ -3739,9 +3589,9 @@ class MreNavm(MelRecord):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-class MreNpc(MelRecord):
+class MreNpc(MreActorBase):
     """Non-Player Character."""
-    classType = 'NPC_'
+    classType = b'NPC_'
 
     _TemplateFlags = Flags(0, Flags.getNames(
             (0, 'useTraits'),
@@ -3805,7 +3655,8 @@ class MreNpc(MelRecord):
                   (_TemplateFlags, 'templateFlags', 0), 'healthOffset',
                   'bleedoutOverride',),
         MelGroups('factions',
-            MelStruct('SNAM', 'IB3s', (FID, 'faction'), 'rank', 'snamUnused'),
+            MelStruct(b'SNAM', u'IB3s', (FID, u'faction'), u'rank',
+                      (u'unused1', b'ODB')),
         ),
         MelOptFid('INAM', 'deathItem'),
         MelOptFid('VTCK', 'voice'),
@@ -3895,7 +3746,7 @@ class MreNpc(MelRecord):
 #------------------------------------------------------------------------------
 class MreOtft(MelRecord):
     """Outfit."""
-    classType = 'OTFT'
+    classType = b'OTFT'
 
     melSet = MelSet(
         MelEdid(),
@@ -3903,12 +3754,14 @@ class MreOtft(MelRecord):
     )
     __slots__ = melSet.getSlotsUsed()
 
+    def mergeFilter(self, modSet):
+        if not self.longFids: raise StateError(u'Fids not in long format')
+        self.items = [i for i in self.items if i[0] in modSet]
+
 #------------------------------------------------------------------------------
-# Marker for organization please don't remove ---------------------------------
-# PACK ------------------------------------------------------------------------
 class MrePack(MelRecord):
     """Package."""
-    classType = 'PACK'
+    classType = b'PACK'
 
     _GeneralFlags = Flags(0, Flags.getNames(
         (0, 'offers_services'),
@@ -4018,36 +3871,7 @@ class MrePack(MelRecord):
                 fallback=MelBase('CNAM', 'value_val')),
             MelBase('BNAM', 'unknown1'),
             MelTopicData('value_topic_data'),
-            MelUnion({
-                0: MelOptStruct('PLDT', 'iIi', 'location_type',
-                                (FID, 'location_value'), 'location_radius'),
-                1: MelOptStruct('PLDT', 'iIi', 'location_type',
-                                (FID, 'location_value'), 'location_radius'),
-                2: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                'location_value', 'location_radius'),
-                3: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                'location_value', 'location_radius'),
-                4: MelOptStruct('PLDT', 'iIi', 'location_type',
-                                (FID, 'location_value'), 'location_radius'),
-                5: MelOptStruct('PLDT', 'iIi', 'location_type',
-                                'location_value', 'location_radius'),
-                6: MelOptStruct('PLDT', 'iIi', 'location_type',
-                                (FID, 'location_value'), 'location_radius'),
-                7: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                'location_value', 'location_radius'),
-                8: MelOptStruct('PLDT', '3i', 'location_type',
-                                'location_value', 'location_radius'),
-                9: MelOptStruct('PLDT', '3i', 'location_type',
-                                'location_value', 'location_radius'),
-                10: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                 'location_value', 'location_radius'),
-                11: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                 'location_value', 'location_radius'),
-                12: MelOptStruct('PLDT', 'i4si', 'location_type',
-                                 'location_value', 'location_radius'),
-            }, decider=PartialLoadDecider(
-                loader=MelSInt32('PLDT', 'location_type'),
-                decider=AttrValDecider('location_type'))),
+            MelLocation(b'PLDT'),
             MelUnion({
                 0: MelOptStruct('PTDA', 'iIi', 'target_type',
                                 (FID, 'target_value'), 'target_count'),
@@ -4130,7 +3954,7 @@ class MrePack(MelRecord):
 #------------------------------------------------------------------------------
 class MrePerk(MelRecord):
     """Perk."""
-    classType = 'PERK'
+    classType = b'PERK'
 
     _PerkScriptFlags = Flags(0, Flags.getNames(
         (0, 'runImmediately'),
@@ -4214,7 +4038,7 @@ class MrePerk(MelRecord):
 #------------------------------------------------------------------------------
 class MreProj(MelRecord):
     """Projectile."""
-    classType = 'PROJ'
+    classType = b'PROJ'
 
     ProjTypeFlags = Flags(0, Flags.getNames(
         (0, 'hitscan'),
@@ -4265,7 +4089,7 @@ class MreProj(MelRecord):
 # Needs testing should be mergable
 class MreQust(MelRecord):
     """Quest."""
-    classType = 'QUST'
+    classType = b'QUST'
 
     _questFlags = Flags(0,Flags.getNames(
         (0,  u'startGameEnabled'),
@@ -4321,7 +4145,7 @@ class MreQust(MelRecord):
         MelFull(),
         MelStruct('DNAM', '=H2B4sI', (_questFlags, 'questFlags', 0),
                   'priority', 'formVersion', 'unknown', 'questType'),
-        MelOptStruct('ENAM','4s',('event',None)),
+        MelOptStruct(b'ENAM', u'4s', (u'event_name', null4)),
         MelFids('QTGL','textDisplayGlobals'),
         MelString('FLTR','objectWindowFilter'),
         MelConditions('dialogueConditions'),
@@ -4351,12 +4175,15 @@ class MreQust(MelRecord):
         MelBase('ANAM','aliasMarker'),
         MelGroups('aliases',
             MelUnion({
-                'ALST': MelOptUInt32('ALST', ('aliasId', None)),
-                'ALLS': MelOptUInt32('ALLS', ('aliasId', None)),
+                b'ALST': MelUInt32(b'ALST', u'aliasId'),
+                b'ALLS': MelUInt32(b'ALLS', u'aliasId'),
             }),
             MelString('ALID', 'aliasName'),
             MelUInt32('FNAM', (aliasFlags, 'flags', 0)),
-            MelOptSInt32('ALFI', ('forcedIntoAlias', None)),
+            # None here is on purpose - ALFI is an alias ID, and 0 is a
+            # perfectly valid alias ID. However, it does not have to be
+            # present, and so needs to be an optional element -> None.
+            MelOptSInt32(b'ALFI', (u'forcedIntoAlias', None)),
             MelFid('ALFL','specificLocation'),
             MelFid('ALFR','forcedReference'),
             MelFid('ALUA','uniqueActor'),
@@ -4439,7 +4266,7 @@ class MreQust(MelRecord):
 # Needs Updating
 class MreRace(MelRecord):
     """Race."""
-    classType = 'RACE'
+    classType = b'RACE'
 
     melSet = MelSet(
         MelEdid(),
@@ -4451,7 +4278,7 @@ class MreRace(MelRecord):
 # Needs Updating
 class MreRefr(MelRecord):
     """Placed Object."""
-    classType = 'REFR'
+    classType = b'REFR'
     _marker_flags = Flags(0, Flags.getNames(
         'visible',
         'can_travel_to',
@@ -4523,7 +4350,7 @@ class MreRefr(MelRecord):
         MelOptFloat('XSCL', ('scale',1.0)),
         MelFid('XSPC','spawnContainer'),
         MelGroup('activateParents',
-            MelUInt8('XAPD', (_parentActivate, 'flags', None)),
+            MelUInt8(b'XAPD', (_parentActivate, u'flags')),
             MelGroups('activateParentRefs',
                 MelStruct('XAPR', 'If', (FID, 'reference'), 'delay'),
             ),
@@ -4543,7 +4370,7 @@ class MreRefr(MelRecord):
         MelNull('XIS2',),
         MelOwnership(),
         MelOptSInt32('XCNT', 'count'),
-        MelOptFloat('XCHG', ('charge', None)),
+        MelOptFloat(b'XCHG', u'charge'),
         MelFid('XLRL','locationReference'),
         MelOptStruct('XESP','IB3s',(FID,'parent'),(_parentFlags,'parentFlags'),('unused6',null3)),
         MelGroups('linkedReference',
@@ -4568,16 +4395,15 @@ class MreRefr(MelRecord):
             MelOptStruct('TNAM', 'Bs', 'marker_type', 'unused1'),
         ),
         MelFid('XATR', 'attachRef'),
-        MelOptStruct('XLOD','3f',('lod1',None),('lod2',None),('lod3',None)),
-        MelOptStruct('DATA','=6f',('posX',None),('posY',None),('posZ',None),
-                     ('rotX',None),('rotY',None),('rotZ',None)),
+        MelXlod(),
+        MelRef3D(),
     )
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
 class MreRegn(MelRecord):
     """Region."""
-    classType = 'REGN'
+    classType = b'REGN'
 
     obflags = Flags(0, Flags.getNames(
         ( 0,'conform'),
@@ -4629,8 +4455,8 @@ class MreRegn(MelRecord):
                 MelStruct('RDGS', 'I4s', (FID, 'grass'), ('unknown', null4)),
             )),
             MelRegnEntrySubrecord(3, MelArray('weatherTypes',
-                MelStruct('RDWT', '3I', (FID, 'weather', None), 'chance',
-                          (FID, 'global', None)),
+                MelStruct(b'RDWT', u'3I', (FID, u'weather'), u'chance',
+                          (FID, u'global')),
             )),
         ),
     )
@@ -4639,7 +4465,7 @@ class MreRegn(MelRecord):
 #------------------------------------------------------------------------------
 class MreRela(MelRecord):
     """Relationship."""
-    classType = 'RELA'
+    classType = b'RELA'
 
     RelationshipFlags = Flags(0, Flags.getNames(
         (0,'Unknown 1'),
@@ -4662,7 +4488,7 @@ class MreRela(MelRecord):
 #------------------------------------------------------------------------------
 class MreRevb(MelRecord):
     """Reverb Parameters"""
-    classType = 'REVB'
+    classType = b'REVB'
 
     melSet = MelSet(
         MelEdid(),
@@ -4676,7 +4502,7 @@ class MreRevb(MelRecord):
 #------------------------------------------------------------------------------
 class MreRfct(MelRecord):
     """Visual Effect."""
-    classType = 'RFCT'
+    classType = b'RFCT'
 
     RfctTypeFlags = Flags(0, Flags.getNames(
         (0, 'rotateToFaceTarget'),
@@ -4693,7 +4519,7 @@ class MreRfct(MelRecord):
 #------------------------------------------------------------------------------
 class MreScen(MelRecord):
     """Scene."""
-    classType = 'SCEN'
+    classType = b'SCEN'
 
     ScenFlags5 = Flags(0, Flags.getNames(
             (0, 'unknown1'),
@@ -4830,7 +4656,7 @@ class MreScen(MelRecord):
 #------------------------------------------------------------------------------
 class MreScrl(MelRecord,MreHasEffects):
     """Scroll."""
-    classType = 'SCRL'
+    classType = b'SCRL'
 
     ScrollDataFlags = Flags(0, Flags.getNames(
         (0, 'manualCostCalc'),
@@ -4864,7 +4690,7 @@ class MreScrl(MelRecord,MreHasEffects):
 #------------------------------------------------------------------------------
 class MreShou(MelRecord):
     """Shout."""
-    classType = 'SHOU'
+    classType = b'SHOU'
 
     melSet = MelSet(
         MelEdid(),
@@ -4872,7 +4698,8 @@ class MreShou(MelRecord):
         MelFid('MDOB','menuDisplayObject'),
         MelLString('DESC','description'),
         MelGroups('wordsOfPower',
-            MelStruct('SNAM','2If',(FID,'word',None),(FID,'spell',None),'recoveryTime',),
+            MelStruct(b'SNAM', u'2If', (FID, u'word'), (FID, u'spell'),
+                      u'recoveryTime'),
         ),
     )
     __slots__ = melSet.getSlotsUsed()
@@ -4880,7 +4707,7 @@ class MreShou(MelRecord):
 #------------------------------------------------------------------------------
 class MreSlgm(MelRecord):
     """Soul Gem."""
-    classType = 'SLGM'
+    classType = b'SLGM'
 
     melSet = MelSet(
         MelEdid(),
@@ -4902,7 +4729,7 @@ class MreSlgm(MelRecord):
 #------------------------------------------------------------------------------
 class MreSmbn(MelRecord):
     """Story Manager Branch Node."""
-    classType = 'SMBN'
+    classType = b'SMBN'
 
     SmbnNodeFlags = Flags(0, Flags.getNames(
         (0,'Random'),
@@ -4923,7 +4750,7 @@ class MreSmbn(MelRecord):
 #------------------------------------------------------------------------------
 class MreSmen(MelRecord):
     """Story Manager Event Node."""
-    classType = 'SMEN'
+    classType = b'SMEN'
 
     SmenNodeFlags = Flags(0, Flags.getNames(
         (0,'Random'),
@@ -4945,7 +4772,7 @@ class MreSmen(MelRecord):
 #------------------------------------------------------------------------------
 class MreSmqn(MelRecord):
     """Story Manager Quest Node."""
-    classType = 'SMQN'
+    classType = b'SMQN'
 
     # "Do all" = "Do all before repeating"
     SmqnQuestFlags = Flags(0, Flags.getNames(
@@ -4968,12 +4795,12 @@ class MreSmqn(MelRecord):
         MelStruct('DNAM', '2H', (SmqnNodeFlags, 'nodeFlags', 0),
                   (SmqnQuestFlags, 'questFlags', 0), ),
         MelUInt32('XNAM', 'maxConcurrentQuests'),
-        MelOptUInt32('MNAM', ('numQuestsToRun', None)),
+        MelOptUInt32(b'MNAM', u'numQuestsToRun'),
         MelCounter(MelUInt32('QNAM', 'quest_count'), counts='quests'),
         MelGroups('quests',
             MelFid('NNAM','quest',),
             MelBase('FNAM','fnam_p'),
-            MelOptFloat('RNAM', ('hoursUntilReset', None)),
+            MelOptFloat(b'RNAM', u'hoursUntilReset'),
         )
     )
     __slots__ = melSet.getSlotsUsed()
@@ -4981,7 +4808,7 @@ class MreSmqn(MelRecord):
 #------------------------------------------------------------------------------
 class MreSnct(MelRecord):
     """Sound Category."""
-    classType = 'SNCT'
+    classType = b'SNCT'
 
     SoundCategoryFlags = Flags(0, Flags.getNames(
         (0,'muteWhenSubmerged'),
@@ -5001,7 +4828,7 @@ class MreSnct(MelRecord):
 #------------------------------------------------------------------------------
 class MreSndr(MelRecord):
     """Sound Descriptor."""
-    classType = 'SNDR'
+    classType = b'SNDR'
 
     melSet = MelSet(
         MelEdid(),
@@ -5024,7 +4851,7 @@ class MreSndr(MelRecord):
 #------------------------------------------------------------------------------
 class MreSopm(MelRecord):
     """Sound Output Model."""
-    classType = 'SOPM'
+    classType = b'SOPM'
 
     SopmFlags = Flags(0, Flags.getNames(
             (0, 'attenuatesWithDistance'),
@@ -5043,16 +4870,16 @@ class MreSopm(MelRecord):
                   'ch1_c', 'ch1_lFE', 'ch1_rL', 'ch1_rR', 'ch1_bL', 'ch1_bR',
                   'ch2_l', 'ch2_r', 'ch2_c', 'ch2_lFE', 'ch2_rL', 'ch2_rR',
                   'ch2_bL', 'ch2_bR'),
-        MelStruct('ANAM','4s2f5B','unknown2','minDistance','maxDistance',
-                  'curve1','curve2','curve3','curve4','curve5',
-                   dumpExtra='extraData',),
+        MelStruct(b'ANAM', u'4s2f5B3s', (u'unknown2', null4), u'minDistance',
+                  u'maxDistance', u'curve1', u'curve2', u'curve3', u'curve4',
+                  u'curve5', (u'unknown3', null3)),
     )
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
 class MreSoun(MelRecord):
     """Sound Marker."""
-    classType = 'SOUN'
+    classType = b'SOUN'
 
     melSet = MelSet(
         MelEdid(),
@@ -5066,7 +4893,7 @@ class MreSoun(MelRecord):
 #------------------------------------------------------------------------------
 class MreSpel(MelRecord,MreHasEffects):
     """Spell."""
-    classType = 'SPEL'
+    classType = b'SPEL'
 
     # currently not used for Skyrim needs investigated to see if TES5Edit does this
     # class SpellFlags(Flags):
@@ -5104,7 +4931,7 @@ class MreSpel(MelRecord,MreHasEffects):
 #------------------------------------------------------------------------------
 class MreSpgd(MelRecord):
     """Shader Particle Geometry."""
-    classType = 'SPGD'
+    classType = b'SPGD'
 
     _SpgdDataFlags = Flags(0, Flags.getNames('rain', 'snow'))
 
@@ -5123,7 +4950,7 @@ class MreSpgd(MelRecord):
 #------------------------------------------------------------------------------
 class MreStat(MelRecord):
     """Static."""
-    classType = 'STAT'
+    classType = b'STAT'
 
     _SnowFlags = Flags(0, Flags.getNames(
         'considered_Snow',
@@ -5152,7 +4979,7 @@ class MreStat(MelRecord):
 #------------------------------------------------------------------------------
 class MreTact(MelRecord):
     """Talking Activator."""
-    classType = 'TACT'
+    classType = b'TACT'
 
     melSet = MelSet(
         MelEdid(),
@@ -5172,7 +4999,7 @@ class MreTact(MelRecord):
 #------------------------------------------------------------------------------
 class MreTree(MelRecord):
     """Tree."""
-    classType = 'TREE'
+    classType = b'TREE'
 
     melSet = MelSet(
         MelEdid(),
@@ -5194,7 +5021,7 @@ class MreTree(MelRecord):
 #------------------------------------------------------------------------------
 class MreTxst(MelRecord):
     """Texture Set."""
-    classType = 'TXST'
+    classType = b'TXST'
 
     TxstTypeFlags = Flags(0, Flags.getNames(
         (0, 'noSpecularMap'),
@@ -5223,7 +5050,7 @@ class MreTxst(MelRecord):
 #------------------------------------------------------------------------------
 class MreVtyp(MelRecord):
     """Voice Type."""
-    classType = 'VTYP'
+    classType = b'VTYP'
 
     VtypTypeFlags = Flags(0, Flags.getNames(
             (0, 'allowDefaultDialog'),
@@ -5239,7 +5066,7 @@ class MreVtyp(MelRecord):
 #------------------------------------------------------------------------------
 class MreWatr(MelRecord):
     """Water."""
-    classType = 'WATR'
+    classType = b'WATR'
 
     WatrTypeFlags = Flags(0, Flags.getNames(
             (0, 'causesDamage'),
@@ -5325,7 +5152,7 @@ class MreWatr(MelRecord):
 #------------------------------------------------------------------------------
 class MreWeap(MelRecord):
     """Weapon"""
-    classType = 'WEAP'
+    classType = b'WEAP'
 
     WeapFlags3 = Flags(0, Flags.getNames(
         (0, 'onDeath'),
@@ -5406,27 +5233,29 @@ class MreWeap(MelRecord):
         MelFid('NAM9','equipSound',),
         MelFid('NAM8','unequipSound',),
         MelStruct('DATA','IfH','value','weight','damage',),
-        MelStruct('DNAM','B3s2fH2sf4s4B2f2I5f12si8si4sf','animationType',
-                  ('dnamUnk1',null3),'speed','reach',
-                  (WeapFlags1,'dnamFlags1',None),('dnamUnk2',null2),'sightFOV',
-                  ('dnamUnk3',null4),'baseVATSToHitChance','attackAnimation',
-                  'numProjectiles','embeddedWeaponAVunused','minRange',
-                  'maxRange','onHit',(WeapFlags2,'dnamFlags2',None),
-                  'animationAttackMultiplier',('dnamUnk4',0.0),
-                  'rumbleLeftMotorStrength','rumbleRightMotorStrength',
-                  'rumbleDuration',('dnamUnk5',null4+null4+null4),'skill',
-                  ('dnamUnk6',null4+null4),'resist',('dnamUnk7',null4),'stagger',),
+        MelStruct(b'DNAM', u'B3s2fH2sf4s4B2f2I5f12si8si4sf', u'animationType',
+                  (u'dnamUnk1', null3), u'speed', u'reach',
+                  (WeapFlags1, u'dnamFlags1'), (u'dnamUnk2', null2),
+                  u'sightFOV', (u'dnamUnk3', null4), u'baseVATSToHitChance',
+                  u'attackAnimation', u'numProjectiles',
+                  u'embeddedWeaponAVunused', u'minRange', u'maxRange',
+                  u'onHit', (WeapFlags2, u'dnamFlags2'),
+                  u'animationAttackMultiplier', u'dnamUnk4',
+                  u'rumbleLeftMotorStrength', u'rumbleRightMotorStrength',
+                  u'rumbleDuration', (u'dnamUnk5', null4 * 3), u'skill',
+                  (u'dnamUnk6', null4 * 2), u'resist', (u'dnamUnk7', null4),
+                  u'stagger'),
         MelIsSSE(
             le_version=MelStruct(
-                'CRDT', 'H2sfB3sI', 'critDamage', ('crdtUnk1', null2),
-                'criticalMultiplier', (WeapFlags3, 'criticalFlags'),
-                ('crdtUnk2', null3), (FID, 'criticalEffect', None)),
+                b'CRDT', u'H2sfB3sI', u'critDamage', (u'crdtUnk1', null2),
+                u'criticalMultiplier', (WeapFlags3, u'criticalFlags'),
+                (u'crdtUnk2', null3), (FID, u'criticalEffect')),
             se_version=MelWeapCrdt(
-                'CRDT', 'H2sfB3s4sI4s', 'critDamage', ('crdtUnk1', null2),
-                'criticalMultiplier', (WeapFlags3, 'criticalFlags'),
-                ('crdtUnk2', null3), ('crdtUnk3', null4),
-                (FID, 'criticalEffect', None), ('crdtUnk4', null4),
-                old_versions={'H2sfB3sI'}),
+                b'CRDT', u'H2sfB3s4sI4s', u'critDamage', (u'crdtUnk1', null2),
+                u'criticalMultiplier', (WeapFlags3, u'criticalFlags'),
+                (u'crdtUnk2', null3), (u'crdtUnk3', null4),
+                (FID, u'criticalEffect'), (u'crdtUnk4', null4),
+                old_versions={u'H2sfB3sI'}),
         ),
         MelUInt32('VNAM', 'detectionSoundLevel'),
         MelFid('CNAM','template',),
@@ -5436,7 +5265,7 @@ class MreWeap(MelRecord):
 #------------------------------------------------------------------------------
 class MreWoop(MelRecord):
     """Word of Power."""
-    classType = 'WOOP'
+    classType = b'WOOP'
 
     melSet = MelSet(
         MelEdid(),
@@ -5448,7 +5277,7 @@ class MreWoop(MelRecord):
 #------------------------------------------------------------------------------
 class MreWrld(MelRecord):
     """Worldspace."""
-    classType = 'WRLD'
+    classType = b'WRLD'
 
     WrldFlags2 = Flags(0, Flags.getNames(
             (0, 'smallWorld'),
@@ -5522,7 +5351,7 @@ class MreWrld(MelRecord):
 # Many Things Marked MelBase that need updated
 class MreWthr(MelRecord):
     """Weather"""
-    classType = 'WTHR'
+    classType = b'WTHR'
 
     WthrFlags2 = Flags(0, Flags.getNames(
             (0, 'layer_0'),

@@ -25,10 +25,11 @@
 """Classes that group records."""
 # Python imports
 from __future__ import division, print_function
+import struct
 from operator import itemgetter
 # Wrye Bash imports
-from .brec import ModReader, RecordHeader
-from .bolt import sio, struct_pack, struct_unpack
+from .brec import ModReader, RecordHeader, GrupHeader, TopGrupHeader
+from .bolt import sio
 from . import bush # for fallout3/nv fsName
 from .exception import AbstractError, ArgumentError, ModError
 
@@ -52,17 +53,18 @@ class MobBase(object):
     support unpacking, but can report its number of records and be written."""
 
     __slots__ = ['header','size','label','groupType','stamp','debug','data',
-                 'changed','numRecords','loadFactory','inName']
+                 'changed','numRecords','loadFactory','inName'] ##: nice collection of forbidden names, including header -> group_header
 
     def __init__(self, header, loadFactory, ins=None, do_unpack=False):
         self.header = header
-        if header.recType == 'GRUP':
-            self.size,self.label,self.groupType,self.stamp = (
-                header.size,header.label,header.groupType,header.stamp)
-        else:
+        self.size = header.size
+        if header.recType == b'GRUP':
+            self.label, self.groupType, self.stamp = (
+                header.label, header.groupType, header.stamp)
+        else: # TODO(ut) should MobBase used for *non* GRUP headers??
             # Yes it's weird, but this is how it needs to work
-            self.size,self.label,self.groupType,self.stamp = (
-                header.size,header.flags1,header.fid,header.flags2)
+            self.label, self.groupType, self.stamp = (
+                header.flags1, header.fid, header.flags2)
         self.debug = False
         self.data = None
         self.changed = False
@@ -76,21 +78,22 @@ class MobBase(object):
         if self.debug: print(u'GRUP load:',self.label)
         #--Read, but don't analyze.
         if not do_unpack:
-            self.data = ins.read(self.size - self.header.__class__.rec_header_size, type(self))
+            self.data = ins.read(self.size - RecordHeader.rec_header_size,
+                                 type(self))
         #--Analyze ins.
         elif ins is not None:
-            self.loadData(ins,
-                          ins.tell() + self.size - self.header.__class__.rec_header_size)
+            self.load_rec_group(ins,
+                ins.tell() + self.size - RecordHeader.rec_header_size)
         #--Analyze internal buffer.
         else:
             with self.getReader() as reader:
-                self.loadData(reader,reader.size)
+                self.load_rec_group(reader, reader.size)
         #--Discard raw data?
         if do_unpack:
             self.data = None
             self.setChanged()
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         raise AbstractError
 
@@ -137,7 +140,7 @@ class MobBase(object):
             self.getNumRecords()
         if self.numRecords > 0:
             self.header.size = self.size
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             out.write(self.data)
 
     def getReader(self):
@@ -165,7 +168,7 @@ class MobObjects(MobBase):
         self.id_records = {}
         MobBase.__init__(self, header, loadFactory, ins, do_unpack)
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         expType = self.label
         recClass = self.loadFactory.getRecClass(expType)
@@ -208,14 +211,13 @@ class MobObjects(MobBase):
     def dump(self,out):
         """Dumps group header and then records."""
         if not self.changed:
-            out.write(RecordHeader('GRUP',self.size, self.label, 0,
-                                   self.stamp).pack())
+            out.write(TopGrupHeader(self.size, self.label, 0, ##: self.header.pack_head() ?
+                                    self.stamp).pack_head())
             out.write(self.data)
         else:
             size = self.getSize()
             if size == RecordHeader.rec_header_size: return
-            out.write(
-                RecordHeader('GRUP', size, self.label, 0, self.stamp).pack())
+            out.write(TopGrupHeader(size,self.label,0,self.stamp).pack_head())
             for record in self.records:
                 record.dump(out)
 
@@ -271,12 +273,12 @@ class MobObjects(MobBase):
             self.records.append(record)
         self.id_records[record_id] = record
 
-    def keepRecords(self,keepIds):
-        """Keeps records with fid in set keepIds. Discards the rest."""
+    def keepRecords(self, p_keep_ids):
+        """Keeps records with fid in set p_keep_ids. Discards the rest."""
         from . import bosh
         self.records = [record for record in self.records if (record.fid == (
             record.isKeyedByEid and bosh.modInfos.masterName,
-            0) and record.eid in keepIds) or record.fid in keepIds]
+            0) and record.eid in p_keep_ids) or record.fid in p_keep_ids]
         self.id_records.clear()
         self.setChanged()
 
@@ -297,7 +299,7 @@ class MobObjects(MobBase):
 class MobDials(MobObjects):
     """DIAL top block of mod file."""
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         expType = self.label
         recClass = self.loadFactory.getRecClass(expType)
@@ -324,12 +326,12 @@ class MobDials(MobObjects):
                     try: # record/recordLoadInfos should be initialized in 'if'
                         record.infoStamp = stamp
                         infoClass = loadGetRecClass('INFO')
+                        hsize = RecordHeader.rec_header_size
                         if infoClass:
-                            recordLoadInfos(ins, ins.tell() + size -
-                                            header.__class__.rec_header_size,
+                            recordLoadInfos(ins, ins.tell() + size - hsize,
                                             infoClass)
                         else:
-                            ins.seek(ins.tell() + size - header.__class__.rec_header_size)
+                            ins.seek(ins.tell() + size - hsize)
                     except AttributeError:
                         raise ModError(self.inName, u'Malformed Plugin: '
                             u'Exterior CELL subblock before worldspace GRUP')
@@ -380,7 +382,7 @@ class MobCell(MobBase):
         self.pgrd = None
         MobBase.__init__(self, header, loadFactory, ins, do_unpack)
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         cellType_class = self.loadFactory.getCellTypeClass()
         persistent,temp,distant = self.persistent,self.temp,self.distant
@@ -494,13 +496,13 @@ class MobCell(MobBase):
         self.cell.dump(out)
         childrenSize = self.getChildrenSize()
         if not childrenSize: return
-        out.writeGroup(childrenSize,self.cell.fid,6,self.stamp)
+        self._write_group_header(out, childrenSize, 6)
         if self.persistent:
-            out.writeGroup(self.getPersistentSize(),self.cell.fid,8,self.stamp)
+            self._write_group_header(out, self.getPersistentSize(), 8)
             for record in self.persistent:
                 record.dump(out)
         if self.temp or self.pgrd or self.land:
-            out.writeGroup(self.getTempSize(),self.cell.fid,9,self.stamp)
+            self._write_group_header(out, self.getTempSize(), 9)
             if self.pgrd:
                 self.pgrd.dump(out)
             if self.land:
@@ -508,9 +510,13 @@ class MobCell(MobBase):
             for record in self.temp:
                 record.dump(out)
         if self.distant:
-            out.writeGroup(self.getDistantSize(),self.cell.fid,10,self.stamp)
+            self._write_group_header(out, self.getDistantSize(), 10)
             for record in self.distant:
                 record.dump(out)
+
+    def _write_group_header(self, out, group_size, group_type):
+        out.write(GrupHeader(group_size, self.cell.fid, group_type,
+                             self.stamp).pack_head()) # FIXME was TESIV only - self.extra??
 
     #--Fid manipulation, record filtering ----------------------------------
     def convertFids(self,mapper,toLong):
@@ -570,18 +576,18 @@ class MobCell(MobBase):
                     recordList[fids[record.fid]] = record
                     mergeDiscard(record.fid)
 
-    def keepRecords(self,keepIds):
-        """Keeps records with fid in set keepIds. Discards the rest."""
-        if self.pgrd and self.pgrd.fid not in keepIds:
+    def keepRecords(self, p_keep_ids):
+        """Keeps records with fid in set p_keep_ids. Discards the rest."""
+        if self.pgrd and self.pgrd.fid not in p_keep_ids:
             self.pgrd = None
-        if self.land and self.land.fid not in keepIds:
+        if self.land and self.land.fid not in p_keep_ids:
             self.land = None
-        self.temp       = [x for x in self.temp if x.fid in keepIds]
-        self.persistent = [x for x in self.persistent if x.fid in keepIds]
-        self.distant    = [x for x in self.distant if x.fid in keepIds]
+        self.temp       = [x for x in self.temp if x.fid in p_keep_ids]
+        self.persistent = [x for x in self.persistent if x.fid in p_keep_ids]
+        self.distant    = [x for x in self.distant if x.fid in p_keep_ids]
         if self.pgrd or self.land or self.persistent or self.temp or \
                 self.distant:
-            keepIds.add(self.cell.fid)
+            p_keep_ids.add(self.cell.fid)
         self.setChanged()
 
 #------------------------------------------------------------------------------
@@ -612,7 +618,7 @@ class MobCells(MobBase):
         if fid in self.id_cellBlock:
             self.id_cellBlock[fid].cell = cell
         else:
-            cellBlock = MobCell(RecordHeader('GRUP', 0, 0, 6, self.stamp),
+            cellBlock = MobCell(GrupHeader(0, 0, 6, self.stamp), ##: Note label is 0 here - specialized GrupHeader subclass?
                                 self.loadFactory, cell)
             cellBlock.setChanged()
             self.cellBlocks.append(cellBlock)
@@ -661,12 +667,12 @@ class MobCells(MobBase):
             bsb0 = (block,None)
             if block != curBlock:
                 curBlock,curSubblock = bsb0
-                outWrite(RecordHeader('GRUP',bsb_size[bsb0],block,
-                                      blockGroupType,stamp).pack())
+                outWrite(GrupHeader(bsb_size[bsb0], block, blockGroupType, ##: Here come the tuples - specialized GrupHeader subclass?
+                                    stamp).pack_head())
             if subblock != curSubblock:
                 curSubblock = subblock
-                outWrite(RecordHeader('GRUP',bsb_size[bsb],subblock,
-                                      subBlockGroupType,stamp).pack())
+                outWrite(GrupHeader(bsb_size[bsb], subblock, subBlockGroupType, ##: Here come the tuples - specialized GrupHeader subclass?
+                                    stamp).pack_head())
             cellBlock.dump(out)
 
     def getNumRecords(self,includeGroups=1):
@@ -678,12 +684,12 @@ class MobCells(MobBase):
         return count
 
     #--Fid manipulation, record filtering ----------------------------------
-    def keepRecords(self,keepIds):
-        """Keeps records with fid in set keepIds. Discards the rest."""
-        #--Note: this call will add the cell to keepIds if any of its
+    def keepRecords(self, p_keep_ids):
+        """Keeps records with fid in set p_keep_ids. Discards the rest."""
+        #--Note: this call will add the cell to p_keep_ids if any of its
         # related records are kept.
-        for cellBlock in self.cellBlocks: cellBlock.keepRecords(keepIds)
-        self.cellBlocks = [x for x in self.cellBlocks if x.cell.fid in keepIds]
+        for cellBlock in self.cellBlocks: cellBlock.keepRecords(p_keep_ids)
+        self.cellBlocks = [x for x in self.cellBlocks if x.cell.fid in p_keep_ids]
         self.id_cellBlock.clear()
         self.setChanged()
 
@@ -715,7 +721,7 @@ class MobCells(MobBase):
 class MobICells(MobCells):
     """Tes4 top block for interior cell records."""
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         expType = self.label
         recCellClass = self.loadFactory.getRecClass(expType)
@@ -746,7 +752,7 @@ class MobICells(MobCells):
             elif recType == 'GRUP':
                 size,groupFid,groupType = header.size,header.label, \
                                           header.groupType
-                delta = size - header.__class__.rec_header_size
+                delta = size - RecordHeader.rec_header_size
                 if groupType == 2: # Block number
                     endBlockPos = insTell() + delta
                 elif groupType == 3: # Sub-block number
@@ -783,12 +789,12 @@ class MobICells(MobCells):
     def dump(self,out):
         """Dumps group header and then records."""
         if not self.changed:
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             out.write(self.data)
         elif self.cellBlocks:
             (totalSize, bsb_size, blocks) = self.getBsbSizes()
             self.header.size = totalSize
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             self.dumpBlocks(out,blocks,bsb_size,2,3)
 
 #------------------------------------------------------------------------------
@@ -799,7 +805,8 @@ class MobWorld(MobCells):
         self.road = None
         MobCells.__init__(self, header, loadFactory, ins, do_unpack)
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos, __packer=struct.Struct(u'I').pack,
+                       __unpacker=struct.Struct(u'2h').unpack):
         """Loads data from input stream. Called by load()."""
         cellType_class = self.loadFactory.getCellTypeClass()
         errLabel = u'World Block'
@@ -827,7 +834,7 @@ class MobWorld(MobCells):
             #--Get record info and handle it
             header = insRecHeader()
             recType,size = header.recType,header.size
-            delta = size - header.__class__.rec_header_size
+            delta = size - RecordHeader.rec_header_size
             recClass = cellGet(recType)
             if recType == 'ROAD':
                 if not recClass: insSeek(size,1)
@@ -866,7 +873,7 @@ class MobWorld(MobCells):
             elif recType == 'GRUP':
                 groupFid,groupType = header.label,header.groupType
                 if groupType == 4: # Exterior Cell Block
-                    block = struct_unpack('2h', struct_pack('I', groupFid))
+                    block = __unpacker(__packer(groupFid))
                     block = (block[1],block[0])
                     endBlockPos = insTell() + delta
                 elif groupType == 5: # Exterior Cell Sub-Block
@@ -932,7 +939,7 @@ class MobWorld(MobCells):
         worldSize = self.world.getSize() + hsize
         self.world.dump(out)
         if not self.changed:
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             out.write(self.data)
             return self.size + worldSize
         elif self.cellBlocks or self.road or self.worldCellBlock:
@@ -944,7 +951,7 @@ class MobWorld(MobCells):
             self.header.size = totalSize
             self.header.label = self.world.fid
             self.header.groupType = 1
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             if self.road:
                 self.road.dump(out)
             if self.worldCellBlock:
@@ -997,17 +1004,17 @@ class MobWorld(MobCells):
                                               mergeIds)
         MobCells.updateRecords(self,srcBlock,mapper,mergeIds)
 
-    def keepRecords(self,keepIds):
-        """Keeps records with fid in set keepIds. Discards the rest."""
-        if self.road and self.road.fid not in keepIds:
+    def keepRecords(self, p_keep_ids):
+        """Keeps records with fid in set p_keep_ids. Discards the rest."""
+        if self.road and self.road.fid not in p_keep_ids:
             self.road = None
         if self.worldCellBlock:
-            self.worldCellBlock.keepRecords(keepIds)
-            if self.worldCellBlock.cell.fid not in keepIds:
+            self.worldCellBlock.keepRecords(p_keep_ids)
+            if self.worldCellBlock.cell.fid not in p_keep_ids:
                 self.worldCellBlock = None
-        MobCells.keepRecords(self,keepIds)
+        MobCells.keepRecords(self, p_keep_ids)
         if self.road or self.worldCellBlock or self.cellBlocks:
-            keepIds.add(self.world.fid)
+            p_keep_ids.add(self.world.fid)
 
 #------------------------------------------------------------------------------
 class MobWorlds(MobBase):
@@ -1020,7 +1027,7 @@ class MobWorlds(MobBase):
         self.orphansSkipped = 0
         MobBase.__init__(self, header, loadFactory, ins, do_unpack)
 
-    def loadData(self,ins,endPos):
+    def load_rec_group(self, ins, endPos):
         """Loads data from input stream. Called by load()."""
         expType = self.label
         recWrldClass = self.loadFactory.getRecClass(expType)
@@ -1052,7 +1059,7 @@ class MobWorlds(MobBase):
                     #raise ModError(ins.inName,'Extra subgroup %d in WRLD
                     # group.' % groupType)
                     #--Orphaned world records. Skip over.
-                    insSeek(header.size - header.__class__.rec_header_size,1)
+                    insSeek(header.size - RecordHeader.rec_header_size,1)
                     self.orphansSkipped += 1
                     continue
                 if groupFid != world.fid:
@@ -1076,17 +1083,17 @@ class MobWorlds(MobBase):
     def dump(self,out):
         """Dumps group header and then records."""
         if not self.changed:
-            out.write(self.header.pack())
+            out.write(self.header.pack_head())
             out.write(self.data)
         else:
             if not self.worldBlocks: return
             worldHeaderPos = out.tell()
-            header = RecordHeader('GRUP', 0, self.label, 0, self.stamp)
-            out.write(header.pack())
-            totalSize = header.__class__.rec_header_size + sum(
+            header = TopGrupHeader(0, self.label, 0, self.stamp)
+            out.write(header.pack_head())
+            totalSize = RecordHeader.rec_header_size + sum(
                 x.dump(out) for x in self.worldBlocks)
             out.seek(worldHeaderPos + 4)
-            out.pack('I', totalSize)
+            out.pack(u'I', totalSize)
             out.seek(worldHeaderPos + totalSize)
 
     def getNumRecords(self,includeGroups=True):
@@ -1130,16 +1137,16 @@ class MobWorlds(MobBase):
             self.id_worldBlocks[fid].world = world
             self.id_worldBlocks[fid].worldCellBlock = worldcellblock
         else:
-            worldBlock = MobWorld(RecordHeader('GRUP',0,0,1,self.stamp),
-                                  self.loadFactory,world)
+            worldBlock = MobWorld(GrupHeader(0, 0, 1, self.stamp), ##: groupType = 1
+                                  self.loadFactory, world)
             worldBlock.setChanged()
             self.worldBlocks.append(worldBlock)
             self.id_worldBlocks[fid] = worldBlock
 
-    def keepRecords(self,keepIds):
-        """Keeps records with fid in set keepIds. Discards the rest."""
-        for worldBlock in self.worldBlocks: worldBlock.keepRecords(keepIds)
+    def keepRecords(self, p_keep_ids):
+        """Keeps records with fid in set p_keep_ids. Discards the rest."""
+        for worldBlock in self.worldBlocks: worldBlock.keepRecords(p_keep_ids)
         self.worldBlocks = [x for x in self.worldBlocks if
-                            x.world.fid in keepIds]
+                            x.world.fid in p_keep_ids]
         self.id_worldBlocks.clear()
         self.setChanged()

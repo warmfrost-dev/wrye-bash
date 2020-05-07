@@ -68,7 +68,7 @@ from ..skyrim.records import MreGmst # used in basher.app_buttons.App_GenPickle#
 #------------------------------------------------------------------------------
 class MreTes4(MreHeaderBase):
     """TES4 Record.  File header."""
-    classType = 'TES4'
+    classType = b'TES4'
 
     melSet = MelSet(
         MelStruct('HEDR', 'f2I', ('version', 1.0), 'numRecords',
@@ -85,13 +85,9 @@ class MreTes4(MreHeaderBase):
     __slots__ = melSet.getSlotsUsed()
 
 #------------------------------------------------------------------------------
-# Marker for organization please don't remove ---------------------------------
-# GLOB ------------------------------------------------------------------------
-# Defined in brec.py as class MreGlob(MelRecord) ------------------------------
-#------------------------------------------------------------------------------
 class MreLvli(MreLeveledList):
     """Leveled Item."""
-    classType = 'LVLI'
+    classType = b'LVLI'
 
     top_copy_attrs = ('chanceNone','maxCount','glob','filterKeywordChances',
                  'epicLootChance','overrideName')
@@ -106,7 +102,7 @@ class MreLvli(MreLeveledList):
         MreLeveledList.MelLlct(),
         MreLeveledList.MelLvlo(),
         MelArray('filterKeywordChances',
-            MelStruct('LLKC', '2I', (FID, 'keyword', None), 'chance'),
+            MelStruct(b'LLKC', u'2I', (FID, u'keyword'), u'chance'),
         ),
         MelFid('LVSG', 'epicLootChance'),
         MelLString('ONAM', 'overrideName')
@@ -116,7 +112,7 @@ class MreLvli(MreLeveledList):
 #------------------------------------------------------------------------------
 class MreLvln(MreLeveledList):
     """Leveled NPC."""
-    classType = 'LVLN'
+    classType = b'LVLN'
 
     top_copy_attrs = ('chanceNone','maxCount','glob','filterKeywordChances',
                  'model','modt_p')
@@ -131,7 +127,7 @@ class MreLvln(MreLeveledList):
         MreLeveledList.MelLlct(),
         MreLeveledList.MelLvlo(),
         MelArray('filterKeywordChances',
-            MelStruct('LLKC', '2I', (FID, 'keyword', None), 'chance'),
+            MelStruct(b'LLKC', u'2I', (FID, u'keyword'), u'chance'),
         ),
         MelString('MODL','model'),
         MelBase('MODT','modt_p'),
