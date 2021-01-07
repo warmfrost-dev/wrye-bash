@@ -61,11 +61,18 @@ class _HandleAliases(object):
         modname = GPath(modname)
         return GPath(self.aliases.get(modname, modname)) ##: drop GPath?
 
-    def _coerce_fid(self, modname, hex_fid):
+    def _coerce_fid(self, modname, hex_fid, __debug=[]):
         """Create a long formid from a unicode modname and a unicode
         hexadecimal - it will blow with ValueError if hex_fid is not
         convertible."""
-        return self._get_alias(modname), int(hex_fid, 16)
+        # if not hex_fid.startswith(u'0x'): raise ValueError ##: see fixmes
+        try:
+            return self._get_alias(modname), int(hex_fid, 0)
+        except ValueError:
+            if not __debug:
+                deprint(u'%s does not start with 0x?' % hex_fid)
+                __debug.append(0)
+            return self._get_alias(modname), int(hex_fid, 16)
 
     def _load_plugin(self, mod_info, target_types= None, keepAll=True):
         """Loads the specified record types in the specified ModInfo and
@@ -1458,7 +1465,7 @@ class SigilStoneDetails(_UsesEffectsMixin):
                 mid = self._coerce_fid(mmod, mobj)
                 smod = _coerce(smod,unicode,AllowNone=True)
                 if smod is None: sid = None
-                else: sid = self._coerce_fid(smod, sobj)
+                else: sid = self._coerce_fid(smod, sobj) ##: FIXME does not check for 0x
                 eid = _coerce(eid,unicode,AllowNone=True)
                 full = _coerce(full,unicode,AllowNone=True)
                 modPath = _coerce(modPath,unicode,AllowNone=True)
@@ -1869,7 +1876,7 @@ class IngredientDetails(_UsesEffectsMixin):
                 mid = self._coerce_fid(mmod, mobj)
                 smod = _coerce(smod, unicode, AllowNone=True)
                 if smod is None: sid = None
-                else: sid = self._coerce_fid(smod, sobj)
+                else: sid = self._coerce_fid(smod, sobj) ##: FIXME does not check for 0x
                 eid = _coerce(eid, unicode, AllowNone=True)
                 full = _coerce(full, unicode, AllowNone=True)
                 modPath = _coerce(modPath, unicode, AllowNone=True)
