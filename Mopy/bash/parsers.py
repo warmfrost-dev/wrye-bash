@@ -363,6 +363,10 @@ class _AParser(_HandleAliases):
         """Returns a set of all record types that this parser requires."""
         return set(self._fp_types) | set(self._sp_types)
 
+    def _update_info_dict(self, fields):
+        rsig, aid, fid, rank = fields ##: naming
+        self.id_stored_info[rsig][aid][fid] = rank
+
 class ActorFactions(_AParser):
     """Parses factions from NPCs and Creatures (in games that have those). Can
     read and write both plugins and CSV, and uses a single pass if called from
@@ -408,10 +412,6 @@ class ActorFactions(_AParser):
         fid = self._coerce_fid(fmod, fobj)
         rank = int(rank)
         return type_, aid, fid, rank
-
-    def _update_info_dict(self, fields):
-        type_, aid, fid, rank = fields
-        self.id_stored_info[type_][aid][fid] = rank
 
     def writeToText(self,textPath):
         """Exports faction data to specified text file."""
@@ -723,11 +723,7 @@ class FactionRelations(_AParser):
         _med, mmod, mobj, _oed, omod, oobj = csv_fields[:6]
         mid = self._coerce_fid(mmod, mobj)
         oid = self._coerce_fid(omod, oobj)
-        return mid, oid, tuple(csv_fields[6:])
-
-    def _update_info_dict(self, fields):
-        mid, oid, relation_attrs = fields
-        self.id_stored_info[b'FACT'][mid][oid] = relation_attrs
+        return b'FACT', mid, oid, tuple(csv_fields[6:])
 
     def writeToText(self,textPath):
         """Exports faction relations to specified text file."""
