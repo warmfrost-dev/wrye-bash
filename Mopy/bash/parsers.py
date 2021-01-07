@@ -677,6 +677,8 @@ class FactionRelations(_AParser):
 
     def __init__(self):
         super(FactionRelations, self).__init__()
+        self.id_stored_info = defaultdict(lambda : defaultdict(list))
+        ##: use a dict or do I have duplicate oids? Do I need an OrderedDict?
         self._fp_types = (b'FACT',) if not self.called_from_patcher else ()
         self._sp_types = (b'FACT',)
         self._needs_fp_master_sort = True
@@ -734,10 +736,7 @@ class FactionRelations(_AParser):
 
     def _update_info_dict(self, fields):
         mid, relation_attrs = fields
-        id_relations = self.id_stored_info[b'FACT']
-        relations = id_relations.get(mid)
-        if relations is None:
-            relations = id_relations[mid] = []
+        relations = self.id_stored_info[b'FACT'][mid]
         for index, entry in enumerate(relations):
             if entry[0] == relation_attrs[0]: # oid
                 relations[index] = relation_attrs
