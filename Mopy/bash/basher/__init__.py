@@ -1342,12 +1342,8 @@ class _EditableMixinOnFileInfos(_EditableMixin):
         #--Changed?
         fileStr = self._fname_ctrl.text_content
         if fileStr == self.fileStr: return
-        #--Extension Changed?
-        if fileStr[-4:].lower() != self.fileStr[-4:].lower():
-            balt.showError(self,_(u"Incorrect file extension: ")+fileStr[-3:])
-            self._fname_ctrl.text_content = self.fileStr
-        #--Validate the filename - no need to check for extension again
-        elif not self._validate_filename(fileStr):
+        #--Validate the filename
+        if not self._validate_filename(fileStr, self.fileStr[-4:].lower()):
             self._fname_ctrl.text_content = self.fileStr
         #--Else file exists?
         elif self.file_info.dir.join(fileStr).exists():
@@ -1358,8 +1354,9 @@ class _EditableMixinOnFileInfos(_EditableMixin):
             self.fileStr = fileStr
             self.SetEdited()
 
-    def _validate_filename(self, fileStr):
-        return self.panel_uilist.validate_filename(fileStr)[0]
+    def _validate_filename(self, fileStr, single_ext):
+        return self.panel_uilist.validate_filename(
+            fileStr, single_ext=single_ext)[0]
 
     def OnFileEdit(self, new_text):
         """Event: Editing filename."""
@@ -1999,13 +1996,13 @@ class SaveList(balt.UIList):
     __ext_group = u'(\.(' + bush.game.Ess.ext[1:] + u'|' + \
                   bush.game.Ess.ext[1:-1] + u'r' + u'))' # add bak !!!
     def validate_filename(self, name_new, has_digits=False, ext=u'',
-            is_filename=True, _old_path=None):
-        if _old_path and bosh.bak_file_pattern.match(_old_path.s): ##: YAK add cosave support for bak
+                          is_filename=True, _old_path=None, single_ext=u''):
+        if _old_path and bosh.bak_file_pattern.match(_old_path.s): #TODO: renaming bak
             balt.showError(self, _(u'Renaming bak files is not supported.'))
             return None, None, None ##: this used to not-Skip now it Vetoes
         return super(SaveList, self).validate_filename(name_new,
             has_digits=has_digits, ext=self.__ext_group,
-            is_filename=is_filename)
+            is_filename=is_filename, single_ext=single_ext)
 
     def OnLabelEdited(self, is_edit_cancelled, evt_label, evt_index, evt_item):
         """Savegame renamed."""
@@ -2188,9 +2185,9 @@ class SaveDetails(_ModsSavesDetails):
         if self.saveInfo and self.gInfo.modified:
             self.saveInfo.set_table_prop(u'info', new_text)
 
-    def _validate_filename(self, fileStr):
+    def _validate_filename(self, fileStr, single_ext):
         return self.panel_uilist.validate_filename(fileStr,
-            _old_path=self.saveInfo.name)[0]
+            _old_path=self.saveInfo.name, single_ext=single_ext)[0]
 
     def testChanges(self): # used by the master list when editing is disabled
         saveInfo = self.saveInfo

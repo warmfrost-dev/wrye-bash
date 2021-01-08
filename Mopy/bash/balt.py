@@ -1484,33 +1484,33 @@ class UIList(wx.Panel):
                 self.__gList._native_widget.EditLabel(index)
 
     def validate_filename(self, name_new, has_digits=False, ext=u'',
-            is_filename=True):
+                          is_filename=True, single_ext=u''):
         newName = name_new
         if not newName:
-            msg = _(u'Empty name !')
-            maPattern = None
-        else:
-            char = is_filename and bolt.Path.has_invalid_chars(newName)
-            if char:
-                msg = _(u'%(new_name)s contains invalid character (%(char)s)'
-                        ) % {u'new_name': newName, u'char': char}
-                maPattern = None
-            else:
-                msg = _(u'Bad extension or file root: ') + newName
-                if ext: # require at least one char before extension
-                    regex = u'' r'^(?=.+\.)(.*?)'
-                else:
-                    regex = u'^(.*?)'
-                if has_digits: regex += u'' r'(\d*)'
-                regex += ext + u'$'
-                rePattern = re.compile(regex, re.I | re.U)
-                maPattern = rePattern.match(newName)
+            return self._err(_(u'Empty name !'))
+        if single_ext and not newName.endswith(single_ext):
+            return self._err(
+                _(u'%s: Incorrect file extension (must be %s)') % (
+                    newName, single_ext))
+        char = is_filename and bolt.Path.has_invalid_chars(newName)
+        if char:
+            return self._err(_(u'%(new_name)s contains invalid character '
+                u'(%(char)s)') % {u'new_name': newName, u'char': char})
+        # require at least one char before extension
+        regex = u'^%s(.*?)' % (u'' r'(?=.+\.)' if ext else u'')
+        if has_digits: regex += u'' r'(\d*)'
+        regex += ext + u'$'
+        rePattern = re.compile(regex, re.I | re.U)
+        maPattern = rePattern.match(newName)
         if maPattern:
             num_str = maPattern.groups()[1] if has_digits else None
         if not maPattern or not (maPattern.groups()[0] or num_str):
-            showError(self, msg)
-            return None, None, None
+            return self._err(_(u'Bad extension or file root: ') + newName)
         return maPattern.groups()[0], GPath(newName), num_str
+
+    def _err(self, msg):
+        showError(self, msg)
+        return None, None, None
 
     @conversation
     def DeleteItems(self, wrapped_evt=None, items=None,
