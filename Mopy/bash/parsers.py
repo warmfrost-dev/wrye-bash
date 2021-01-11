@@ -61,11 +61,11 @@ class _HandleAliases(object):
         modname = GPath(modname)
         return GPath(self.aliases.get(modname, modname)) ##: drop GPath?
 
-    def _coerce_fid(self, modname, hex_fid, __debug=[]):
+    def _coerce_fid(self, modname, hex_fid):
         """Create a long formid from a unicode modname and a unicode
         hexadecimal - it will blow with ValueError if hex_fid is not
         convertible."""
-        if not hex_fid.startswith(u'0x'): raise ValueError ##: see fixmes
+        if not hex_fid.startswith(u'0x'): raise ValueError
         return self._get_alias(modname), int(hex_fid, 0)
 
     def readFromText(self, csv_path):
@@ -408,7 +408,7 @@ class ActorFactions(_AParser):
     def _parse_line(self, csv_fields):
         type_, _aed, amod, aobj, _fed, fmod, fobj, rank = csv_fields[:9]
         aid = self._coerce_fid(amod, aobj)
-        fid = self._coerce_fid(fmod, fobj) ##: FIXME did not check for 0x
+        fid = self._coerce_fid(fmod, fobj)
         rank = int(rank)
         return aid, fid, rank, type_
 
@@ -743,7 +743,7 @@ class FactionRelations(_AParser):
     def _parse_line(self, csv_fields):
         _med, mmod, mobj, _oed, omod, oobj = csv_fields[:6]
         mid = self._coerce_fid(mmod, mobj)
-        oid = self._coerce_fid(omod, oobj) ##: FIXME did not check for 0x
+        oid = self._coerce_fid(omod, oobj)
         relation_attrs = (oid,) + tuple(csv_fields[6:])
         return mid, relation_attrs
 
@@ -1451,7 +1451,7 @@ class SigilStoneDetails(_UsesEffectsMixin):
                 mid = self._coerce_fid(mmod, mobj)
                 smod = _coerce(smod,unicode,AllowNone=True)
                 if smod is None: sid = None
-                else: sid = self._coerce_fid(smod, sobj) ##: FIXME did not check for 0x
+                else: sid = self._coerce_fid(smod, sobj)
                 eid = _coerce(eid,unicode,AllowNone=True)
                 full = _coerce(full,unicode,AllowNone=True)
                 modPath = _coerce(modPath,unicode,AllowNone=True)
@@ -1862,7 +1862,7 @@ class IngredientDetails(_UsesEffectsMixin):
                 mid = self._coerce_fid(mmod, mobj)
                 smod = _coerce(smod, unicode, AllowNone=True)
                 if smod is None: sid = None
-                else: sid = self._coerce_fid(smod, sobj) ##: FIXME did not check for 0x
+                else: sid = self._coerce_fid(smod, sobj)
                 eid = _coerce(eid, unicode, AllowNone=True)
                 full = _coerce(full, unicode, AllowNone=True)
                 modPath = _coerce(modPath, unicode, AllowNone=True)
