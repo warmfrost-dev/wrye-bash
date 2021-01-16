@@ -543,8 +543,11 @@ class EditorIds(_HandleAliases):
     """Editor ids for records, with functions for importing/exporting
     from/to mod/text file."""
 
-    def __init__(self, types=None, aliases_=None):
+    def __init__(self, types=None, aliases_=None, questionableEidsSet=None,
+                 badEidsList=None):
         super(EditorIds, self).__init__(aliases_)
+        self.badEidsList = badEidsList
+        self.questionableEidsSet = questionableEidsSet
         self.type_id_eid = defaultdict(dict) #--eid = eids[type][longid]
         self.old_new = {}
         if types:
@@ -627,33 +630,36 @@ class EditorIds(_HandleAliases):
         #--Done
         return changed
 
-    def readFromText(self,textPath,questionableEidsSet=None,badEidsList=None):
+    def readFromText(self,textPath):
         """Imports eids from specified text file."""
         type_id_eid = self.type_id_eid
         with CsvReader(textPath) as ins:
-            reValidEid = re.compile(u'^[a-zA-Z0-9]+$')
-            reGoodEid = re.compile(u'^[a-zA-Z]')
             for fields in ins:
                 if len(fields) < 4 or fields[2][:2] != u'0x': continue
                 eid, longid, top_grup = self._parse_line(fields)
-                if not reValidEid.match(eid):
-                    if badEidsList is not None:
-                        badEidsList.append(eid)
-                    continue
-                if questionableEidsSet is not None and not reGoodEid.match(
-                        eid):
-                    questionableEidsSet.add(eid)
                 id_eid = type_id_eid[top_grup]
                 id_eid[longid] = eid
-                #--Explicit old to new def? (Used for script updating.)
-                if len(fields) > 4:
-                    self.old_new[_coerce(fields[4], unicode).lower()] = eid
 
-    def _parse_line(self, csv_fields):
+    def _parse_line(self, csv_fields,
+                    __reValidEid=re.compile(u'^[a-zA-Z0-9]+$'),
+                    __reGoodEid=re.compile(u'^[a-zA-Z]')):
         top_grup, mod, objectIndex, eid = csv_fields[:4]  ##: debug: top_grup??
         longid = self._coerce_fid(mod, objectIndex)
         eid = _coerce(eid, unicode, AllowNone=True)
-        return eid, longid, top_grup
+        if not __reValidEid.match(eid):
+            if self.badEidsList is not None:
+                self.badEidsList.append(eid)
+            raise ValueError
+        if self.questionableEidsSet is not None and not __reGoodEid.match(eid):
+            self.questionableEidsSet.add(eid)
+        #--Explicit old to new def? (Used for script updating.)
+        if len(csv_fields) > 4:
+            self.old_new[_coerce(csv_fields[4], unicode).lower()] = eid
+        return top_grup, longid, eid
+
+    def _update_info_dict(self, fields):
+        top_grup, longid, eid = fields
+        self.type_id_eid[top_grup][longid] = eid
 
     def writeToText(self,textPath):
         """Exports eids to specified text file."""
@@ -1183,7 +1189,7 @@ class ScriptText(object):
         if changed or added: modFile.safeSave()
         return changed, added
 
-    def readFromText(self,textPath,modInfo):
+    def readFromText(self, textPath):
         """Reads scripts from files in specified mods' directory in bashed
         patches folder."""
         eid_data = self.eid_data
