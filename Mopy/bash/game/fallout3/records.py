@@ -1523,8 +1523,8 @@ class MreInfo(MelRecord):
         MelFid(b'PNAM','prevInfo'),
         MelFids(b'NAME','addTopics'),
         MelGroups('responses',
-            MelStruct(b'TRDT','Ii4sB3sIB3s','emotionType','emotionValue',('unused1',null4),'responseNum',('unused2','\xcd\xcd\xcd'),
-                      (FID,'sound'),'flags',('unused3','\xcd\xcd\xcd')),
+            MelStruct(b'TRDT','Ii4sB3sIB3s','emotionType','emotionValue',('unused1',null4),'responseNum',('unused2',b'\xcd\xcd\xcd'),
+                      (FID,'sound'),'flags',('unused3',b'\xcd\xcd\xcd')),
             MelString(b'NAM1','responseText'),
             MelString(b'NAM2','actorNotes'),
             MelString(b'NAM3','edits'),
@@ -2481,7 +2481,7 @@ class MreRace(MelRecord):
                   'maleHeight','femaleHeight','maleWeight','femaleWeight',(_flags,'flags',0)),
         MelFid(b'ONAM','Older'),
         MelFid(b'YNAM','Younger'),
-        MelBase(b'NAM2','_nam2',''),
+        MelBase(b'NAM2','_nam2',b''),
         MelRaceVoices(b'VTCK', '2I', (FID, 'maleVoice'), (FID, 'femaleVoice')),
         MelOptStruct(b'DNAM','2I',(FID,'defaultHairMale',0),(FID,'defaultHairFemale',0)),
         # Int corresponding to GMST sHairColorNN
@@ -2489,8 +2489,8 @@ class MreRace(MelRecord):
         MelOptFloat(b'PNAM', 'mainClamp'),
         MelOptFloat(b'UNAM', 'faceClamp'),
         MelStruct(b'ATTR','2B','maleBaseAttribute','femaleBaseAttribute'),
-        MelBase(b'NAM0', 'head_data_marker', ''),
-        MelBase(b'MNAM', 'male_head_data_marker', ''),
+        MelBase(b'NAM0', 'head_data_marker', b''),
+        MelBase(b'MNAM', 'male_head_data_marker', b''),
         MelRaceParts({
             0: u'maleHead',
             1: u'maleEars',
@@ -2535,9 +2535,9 @@ class MreRace(MelRecord):
         )),
         MelFidList(b'HNAM','hairs'),
         MelFidList(b'ENAM','eyes'),
-        MelBase(b'MNAM', 'male_facegen_marker', ''),
+        MelBase(b'MNAM', 'male_facegen_marker', b''),
         MelRaceFaceGen('maleFaceGen'),
-        MelBase(b'FNAM', 'female_facegen_marker', ''),
+        MelBase(b'FNAM', 'female_facegen_marker', b''),
         MelRaceFaceGen('femaleFaceGen'),
     ).with_distributor({
         b'NAM0': {
@@ -3216,10 +3216,10 @@ class MreWthr(MelRecord):
 
     melSet = MelSet(
         MelEdid(),
-        MelFid("\x00IAD", 'sunriseImageSpaceModifier'),
-        MelFid("\x01IAD", 'dayImageSpaceModifier'),
-        MelFid("\x02IAD", 'sunsetImageSpaceModifier'),
-        MelFid("\x03IAD", 'nightImageSpaceModifier'),
+        MelFid(b'\x00IAD', 'sunriseImageSpaceModifier'),
+        MelFid(b'\x01IAD', 'dayImageSpaceModifier'),
+        MelFid(b'\x02IAD', 'sunsetImageSpaceModifier'),
+        MelFid(b'\x03IAD', 'nightImageSpaceModifier'),
         MelString(b'DNAM','upperLayer'),
         MelString(b'CNAM','lowerLayer'),
         MelString(b'ANAM','layer2'),

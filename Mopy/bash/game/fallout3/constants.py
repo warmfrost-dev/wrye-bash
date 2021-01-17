@@ -353,6 +353,8 @@ statsTypes = {
         u'criticalMultiplier'),
 }
 
+# TODO(lojack): the record signatures seem to be only used by CSV reading/
+# writing.  Make sure there's no broken interaction there.
 statsHeaders = (
     #--Alch
     (u'ALCH',
@@ -411,29 +413,29 @@ statsHeaders = (
 # Import Sounds
 #------------------------------------------------------------------------------
 soundsTypes = {
-    "ACTI": ('soundLooping','soundActivation',),
-    "ADDN": ('ambientSound',),
-    "ALCH": ('dropSound','pickupSound','soundConsume',),
-    "ASPC": ('soundLooping','useSoundFromRegion',),
-    "COBJ": ('pickupSound','dropSound',),
-    "CONT": ('soundOpen','soundClose',),
-    "CREA": ('footWeight','inheritsSoundsFrom','sounds'),
-    "DOOR": ('soundOpen','soundClose','soundLoop',),
-    "EXPL": ('soundLevel','sound1','sound2',),
-    "IPCT": ('soundLevel','sound1','sound2',),
-    "LIGH": ('sound',),
-    "MGEF": ('castingSound','boltSound','hitSound','areaSound',),
-    "PROJ": ('sound','soundCountDown','soundDisable','soundLevel',),
-#    "REGN": ('entries.sounds',),
-    "SOUN": ('soundFile','minDist','maxDist','freqAdj','flags','staticAtten',
+    b'ACTI': ('soundLooping','soundActivation',),
+    b'ADDN': ('ambientSound',),
+    b'ALCH': ('dropSound','pickupSound','soundConsume',),
+    b'ASPC': ('soundLooping','useSoundFromRegion',),
+    b'COBJ': ('pickupSound','dropSound',),
+    b'CONT': ('soundOpen','soundClose',),
+    b'CREA': ('footWeight','inheritsSoundsFrom','sounds'),
+    b'DOOR': ('soundOpen','soundClose','soundLoop',),
+    b'EXPL': ('soundLevel','sound1','sound2',),
+    b'IPCT': ('soundLevel','sound1','sound2',),
+    b'LIGH': ('sound',),
+    b'MGEF': ('castingSound','boltSound','hitSound','areaSound',),
+    b'PROJ': ('sound','soundCountDown','soundDisable','soundLevel',),
+#    b'REGN': ('entries.sounds',),
+    b'SOUN': ('soundFile','minDist','maxDist','freqAdj','flags','staticAtten',
              'stopTime','startTime','point0','point1','point2','point3',
              'point4','reverb','priority','xLoc','yLoc',),
-    "TACT": ('sound',),
-    "WATR": ('sound',),
-    "WEAP": ('pickupSound','dropSound','soundGunShot3D','soundGunShot2D',
+    b'TACT': ('sound',),
+    b'WATR': ('sound',),
+    b'WEAP': ('pickupSound','dropSound','soundGunShot3D','soundGunShot2D',
              'soundGunShot3DLooping','soundMeleeSwingGunNoAmmo','soundBlock','idleSound',
              'equipSound','unequipSound','soundLevel',),
-    "WTHR": ('sounds',),
+    b'WTHR': ('sounds',),
 }
 
 #------------------------------------------------------------------------------
