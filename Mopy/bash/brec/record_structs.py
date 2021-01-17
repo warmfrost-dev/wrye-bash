@@ -445,7 +445,7 @@ class MreRecord(object):
             raise exception.StateError(u'Data undefined: ' + self.recType + u' ' + hex(self.fid))
         #--Update the header so it 'packs' correctly
         self.header.size = self.size
-        if self.recType != 'GRUP':
+        if self.recType != b'GRUP':
             self.header.flags1 = self.flags1
             self.header.fid = self.fid
         out.write(self.header.pack_head())

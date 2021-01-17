@@ -467,7 +467,7 @@ getvatsvalue_index = 407
 #------------------------------------------------------------------------------
 # Leveled Lists
 #------------------------------------------------------------------------------
-listTypes = ('LVLI','LVLN','LVSP',)
+listTypes = (b'LVLI',b'LVLN',b'LVSP',)
 
 #------------------------------------------------------------------------------
 # Import Names
@@ -484,25 +484,25 @@ namesTypes = {b'ACTI', b'ALCH', b'AMMO', b'APPA', b'ARMO', b'AVIF', b'BOOK',
 # Import Prices
 #------------------------------------------------------------------------------
 pricesTypes = {
-    'ALCH':{},'AMMO':{},'APPA':{},'ARMO':{},'BOOK':{},'INGR':{},'KEYM':{},
-    'LIGH':{},'MISC':{},'SLGM':{},'WEAP':{}
+    b'ALCH':{},b'AMMO':{},b'APPA':{},b'ARMO':{},b'BOOK':{},b'INGR':{},b'KEYM':{},
+    b'LIGH':{},b'MISC':{},b'SLGM':{},b'WEAP':{}
     }
 
 #------------------------------------------------------------------------------
 # Import Stats
 #------------------------------------------------------------------------------
 statsTypes = {
-        'ALCH':('eid', 'weight', 'value'),
-        'AMMO':('eid', 'value', 'damage'),
-        'APPA':('eid', 'weight', 'value'),
-        'ARMO':('eid', 'weight', 'value', 'armorRating'),
-        'BOOK':('eid', 'weight', 'value'),
-        'INGR':('eid', 'weight', 'value'),
-        'KEYM':('eid', 'weight', 'value'),
-        'LIGH':('eid', 'weight', 'value', 'duration'),
-        'MISC':('eid', 'weight', 'value'),
-        'SLGM':('eid', 'weight', 'value'),
-        'WEAP':('eid', 'weight', 'value', 'damage', 'speed', 'reach',
+        b'ALCH':('eid', 'weight', 'value'),
+        b'AMMO':('eid', 'value', 'damage'),
+        b'APPA':('eid', 'weight', 'value'),
+        b'ARMO':('eid', 'weight', 'value', 'armorRating'),
+        b'BOOK':('eid', 'weight', 'value'),
+        b'INGR':('eid', 'weight', 'value'),
+        b'KEYM':('eid', 'weight', 'value'),
+        b'LIGH':('eid', 'weight', 'value', 'duration'),
+        b'MISC':('eid', 'weight', 'value'),
+        b'SLGM':('eid', 'weight', 'value'),
+        b'WEAP':('eid', 'weight', 'value', 'damage', 'speed', 'reach',
                 'enchantPoints', 'stagger', 'critDamage','criticalMultiplier',
                 'criticalEffect',),
     }
@@ -735,7 +735,7 @@ graphicsModelAttrs = (u'model', u'model1', u'model2', u'model4', u'male_model',
 #------------------------------------------------------------------------------
 # Import Inventory
 #------------------------------------------------------------------------------
-inventoryTypes = ('NPC_','CONT',)
+inventoryTypes = (b'NPC_',b'CONT',)
 
 #------------------------------------------------------------------------------
 # Import Keywords
@@ -773,40 +773,43 @@ text_types = {
 #------------------------------------------------------------------------------
 # Import Object Bounds
 #------------------------------------------------------------------------------
-object_bounds_types = {'ACTI', 'ADDN', 'ALCH', 'AMMO', 'APPA', 'ARMO', 'ARTO',
-                       'ASPC', 'BOOK', 'CONT', 'DOOR', 'DUAL', 'ENCH', 'EXPL',
-                       'FLOR', 'FURN', 'GRAS', 'HAZD', 'IDLM', 'INGR', 'KEYM',
-                       'LIGH', 'LVLI', 'LVLN', 'LVSP', 'MISC', 'MSTT', 'NPC_',
-                       'PROJ', 'SCRL', 'SLGM', 'SOUN', 'SPEL', 'STAT', 'TACT',
-                       'TREE', 'TXST', 'WEAP'}
+object_bounds_types = {b'ACTI', b'ADDN', b'ALCH', b'AMMO', b'APPA', b'ARMO',
+                       b'ARTO', b'ASPC', b'BOOK', b'CONT', b'DOOR', b'DUAL',
+                       b'ENCH', b'EXPL', b'FLOR', b'FURN', b'GRAS', b'HAZD',
+                       b'IDLM', b'INGR', b'KEYM', b'LIGH', b'LVLI', b'LVLN',
+                       b'LVSP', b'MISC', b'MSTT', b'NPC_', b'PROJ', b'SCRL',
+                       b'SLGM', b'SOUN', b'SPEL', b'STAT', b'TACT', b'TREE',
+                       b'TXST', b'WEAP'}
 
 #------------------------------------------------------------------------------
 # Contents Checker
 #------------------------------------------------------------------------------
 # Entry types used for COBJ, CONT, LVLI and NPC_
-_common_entry_types = {'ALCH', 'AMMO', 'APPA', 'ARMO', 'BOOK', 'INGR', 'KEYM',
-                       'LIGH', 'LVLI', 'MISC', 'SLGM', 'SCRL', 'WEAP'}
+_common_entry_types = {b'ALCH', b'AMMO', b'APPA', b'ARMO', b'BOOK', b'INGR',
+                       b'KEYM', b'LIGH', b'LVLI', b'MISC', b'SLGM', b'SCRL',
+                       b'WEAP'}
 cc_valid_types = {
-    'COBJ': _common_entry_types,
-    'CONT': _common_entry_types,
-    'LVLN': {'LVLN', 'NPC_'},
-    'LVLI': _common_entry_types,
-    'LVSP': {'LVSP', 'SPEL'},
-    'NPC_': _common_entry_types,
-    'OTFT': {'ARMO', 'LVLI'},
+    b'COBJ': _common_entry_types,
+    b'CONT': _common_entry_types,
+    b'LVLN': {b'LVLN', b'NPC_'},
+    b'LVLI': _common_entry_types,
+    b'LVSP': {b'LVSP', b'SPEL'},
+    b'NPC_': _common_entry_types,
+    b'OTFT': {b'ARMO', b'LVLI'},
 }
 cc_passes = (
-    (('LVLN', 'LVLI', 'LVSP'), 'entries', 'listId'),
-    (('COBJ', 'CONT', 'NPC_'), 'items', 'item'),
-    (('OTFT',), 'items'),
+    ((b'LVLN', b'LVLI', b'LVSP'), 'entries', 'listId'),
+    ((b'COBJ', b'CONT', b'NPC_'), 'items', 'item'),
+    ((b'OTFT',), 'items'),
 )
 
 #------------------------------------------------------------------------------
 # Import Destructible
 #------------------------------------------------------------------------------
-destructible_types = {'ACTI', 'ALCH', 'AMMO', 'APPA', 'ARMO', 'BOOK', 'CONT',
-                      'DOOR', 'FLOR', 'FURN', 'KEYM', 'LIGH', 'MISC', 'MSTT',
-                      'NPC_', 'PROJ', 'SCRL', 'SLGM', 'TACT', 'WEAP'}
+destructible_types = {b'ACTI', b'ALCH', b'AMMO', b'APPA', b'ARMO', b'BOOK',
+                      b'CONT', b'DOOR', b'FLOR', b'FURN', b'KEYM', b'LIGH',
+                      b'MISC', b'MSTT', b'NPC_', b'PROJ', b'SCRL', b'SLGM',
+                      b'TACT', b'WEAP'}
 
 #------------------------------------------------------------------------------
 # Import Actors
@@ -852,7 +855,7 @@ actor_importer_attrs = {
         u'NPC.Race': (u'race',),
     },
 }
-actor_types = ('NPC_',)
+actor_types = (b'NPC_',)
 
 #------------------------------------------------------------------------------
 # Import Spell Stats

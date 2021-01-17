@@ -308,7 +308,7 @@ getvatsvalue_index = 408
 #------------------------------------------------------------------------------
 # Leveled Lists
 #------------------------------------------------------------------------------
-listTypes = ('LVLC','LVLI','LVLN')
+listTypes = (b'LVLC',b'LVLI',b'LVLN')
 
 #------------------------------------------------------------------------------
 # Import Names
@@ -323,33 +323,34 @@ namesTypes = {
 #------------------------------------------------------------------------------
 # Import Prices
 #------------------------------------------------------------------------------
-pricesTypes = {'ALCH': {}, 'AMMO': {}, 'ARMO': {}, 'ARMA': {}, 'BOOK': {},
-               'INGR': {}, 'KEYM': {}, 'LIGH': {}, 'MISC': {}, 'WEAP': {}}
+pricesTypes = {b'ALCH': {}, b'AMMO': {}, b'ARMO': {}, b'ARMA': {}, b'BOOK': {},
+               b'INGR': {}, b'KEYM': {}, b'LIGH': {}, b'MISC': {}, b'WEAP': {}}
 
 #------------------------------------------------------------------------------
 # Import Stats
 #------------------------------------------------------------------------------
 statsTypes = {
-    'ALCH': ('eid', 'weight', 'value'),
-    'AMMO': ('eid', 'value', 'speed', 'clipRounds'),
-    'ARMA': ('eid', 'weight', 'value', 'health', 'ar'),
-    'ARMO': ('eid', 'weight', 'value', 'health', 'ar'),
-    'BOOK': ('eid', 'weight', 'value'),
-    'INGR': ('eid', 'weight', 'value'),
-    'KEYM': ('eid', 'weight', 'value'),
-    'LIGH': ('eid', 'weight', 'value', 'duration'),
-    'MISC': ('eid', 'weight', 'value'),
-    'WEAP': ('eid', 'weight', 'value', 'health', 'damage','clipsize',
-             'animationMultiplier','reach','ammoUse','minSpread','spread',
-             'sightFov','baseVatsToHitChance','projectileCount','minRange',
-             'maxRange','animationAttackMultiplier','fireRate',
-             'overrideActionPoint','rumbleLeftMotorStrength',
-             'rumbleRightMotorStrength','rumbleDuration',
-             'overrideDamageToWeaponMult','attackShotsPerSec','reloadTime',
-             'jamTime','aimArc','rambleWavelangth','limbDmgMult',
-             'sightUsage','semiAutomaticFireDelayMin',
-             'semiAutomaticFireDelayMax','criticalDamage',
-             'criticalMultiplier'),
+    b'ALCH': (u'eid', u'weight', u'value'),
+    b'AMMO': (u'eid', u'value', u'speed', u'clipRounds'),
+    b'ARMA': (u'eid', u'weight', u'value', u'health', u'ar'),
+    b'ARMO': (u'eid', u'weight', u'value', u'health', u'ar'),
+    b'BOOK': (u'eid', u'weight', u'value'),
+    b'INGR': (u'eid', u'weight', u'value'),
+    b'KEYM': (u'eid', u'weight', u'value'),
+    b'LIGH': (u'eid', u'weight', u'value', u'duration'),
+    b'MISC': (u'eid', u'weight', u'value'),
+    b'WEAP': (
+        u'eid', u'weight', u'value', u'health', u'damage', u'clipsize',
+        u'animationMultiplier', u'reach', u'ammoUse', u'minSpread', u'spread',
+        u'sightFov', u'baseVatsToHitChance', u'projectileCount', u'minRange',
+        u'maxRange', u'animationAttackMultiplier', u'fireRate',
+        u'overrideActionPoint', u'rumbleLeftMotorStrength',
+        u'rumbleRightMotorStrength', u'rumbleDuration',
+        u'overrideDamageToWeaponMult', u'attackShotsPerSec', u'reloadTime',
+        u'jamTime', u'aimArc', u'rambleWavelangth', u'limbDmgMult',
+        u'sightUsage', u'semiAutomaticFireDelayMin',
+        u'semiAutomaticFireDelayMax', u'criticalDamage',
+        u'criticalMultiplier'),
 }
 
 statsHeaders = (
@@ -570,7 +571,7 @@ graphicsModelAttrs = (u'model', u'shellCasingModel', u'scopeModel',
 #------------------------------------------------------------------------------
 # Import Inventory
 #------------------------------------------------------------------------------
-inventoryTypes = ('CREA','NPC_','CONT',)
+inventoryTypes = (b'CREA',b'NPC_',b'CONT',)
 
 #------------------------------------------------------------------------------
 # Import Text
@@ -591,33 +592,33 @@ text_types = {
 #------------------------------------------------------------------------------
 # Import Object Bounds
 #------------------------------------------------------------------------------
-object_bounds_types = {'ACTI', 'ADDN', 'ALCH', 'AMMO', 'ARMA', 'ARMO', 'ASPC',
-                       'BOOK', 'COBJ', 'CONT', 'CREA', 'DOOR', 'EXPL', 'FURN',
-                       'GRAS', 'IDLM', 'INGR', 'KEYM', 'LIGH', 'LVLC', 'LVLI',
-                       'LVLN', 'MISC', 'MSTT', 'NOTE', 'NPC_', 'PROJ', 'PWAT',
-                       'SCOL', 'SOUN', 'STAT', 'TACT', 'TERM', 'TREE', 'TXST',
-                       'WEAP'}
+object_bounds_types = {b'ACTI', b'ADDN', b'ALCH', b'AMMO', b'ARMA', b'ARMO',
+                       b'ASPC', b'BOOK', b'COBJ', b'CONT', b'CREA', b'DOOR',
+                       b'EXPL', b'FURN', b'GRAS', b'IDLM', b'INGR', b'KEYM',
+                       b'LIGH', b'LVLC', b'LVLI', b'LVLN', b'MISC', b'MSTT',
+                       b'NOTE', b'NPC_', b'PROJ', b'PWAT', b'SCOL', b'SOUN',
+                       b'STAT', b'TACT', b'TERM', b'TREE', b'TXST', b'WEAP'}
 
 #------------------------------------------------------------------------------
 # Contents Checker
 #------------------------------------------------------------------------------
 # Entry types used for CONT, CREA, LVLI and NPC_
-_common_entry_types = {'ALCH', 'AMMO', 'ARMO', 'BOOK', 'KEYM', 'LVLI', 'MISC',
-                       'NOTE', 'WEAP'}
+_common_entry_types = {b'ALCH', b'AMMO', b'ARMO', b'BOOK', b'KEYM', b'LVLI',
+                       b'MISC', b'NOTE', b'WEAP'}
 # These are marked as {?} in xEdit for FO3, absent for FO3's LVLI, and
 # completely commented out in xEdit for FNV. Included for now just to be safe.
-_common_entry_types |= {'MSTT', 'STAT'}
+_common_entry_types |= {b'MSTT', b'STAT'}
 cc_valid_types = {
-    'CONT': _common_entry_types,
-    'CREA': _common_entry_types,
-    'LVLC': {'CREA', 'LVLC'},
-    'LVLN': {'LVLN', 'NPC_'},
-    'LVLI': _common_entry_types - {'MSTT', 'STAT'},
-    'NPC_': _common_entry_types,
+    b'CONT': _common_entry_types,
+    b'CREA': _common_entry_types,
+    b'LVLC': {b'CREA', b'LVLC'},
+    b'LVLN': {b'LVLN', b'NPC_'},
+    b'LVLI': _common_entry_types - {b'MSTT', b'STAT'},
+    b'NPC_': _common_entry_types,
 }
 cc_passes = (
-    (('LVLC', 'LVLN', 'LVLI'), 'entries', 'listId'),
-    (('CONT', 'CREA', 'NPC_'), 'items', 'item'),
+    ((b'LVLC', b'LVLN', b'LVLI'), 'entries', 'listId'),
+    ((b'CONT', b'CREA', b'NPC_'), 'items', 'item'),
 )
 
 #------------------------------------------------------------------------------
@@ -628,16 +629,16 @@ cc_passes = (
 #                     'QUST', 'TERM', 'TACT'
 # In valda's FNV version, only 'CCRD' got added
 # INGR and COBJ are unused - still including them, see e.g. APPA in Skyrim
-scripts_types = {'ACTI', 'ALCH', 'ARMO', 'BOOK', 'COBJ', 'CONT', 'CREA',
-                 'DOOR', 'FURN', 'INGR', 'KEYM', 'LIGH', 'MISC', 'NPC_',
-                 'QUST', 'TACT', 'TERM', 'WEAP'}
+scripts_types = {b'ACTI', b'ALCH', b'ARMO', b'BOOK', b'COBJ', b'CONT', b'CREA',
+                 b'DOOR', b'FURN', b'INGR', b'KEYM', b'LIGH', b'MISC', b'NPC_',
+                 b'QUST', b'TACT', b'TERM', b'WEAP'}
 
 #------------------------------------------------------------------------------
 # Import Destructible
 #------------------------------------------------------------------------------
-destructible_types = {'ACTI', 'ALCH', 'AMMO', 'ARMO', 'BOOK', 'CONT', 'CREA',
-                      'DOOR', 'FURN', 'KEYM', 'LIGH', 'MISC', 'MSTT', 'NPC_',
-                      'PROJ', 'TACT', 'TERM', 'WEAP'}
+destructible_types = {b'ACTI', b'ALCH', b'AMMO', b'ARMO', b'BOOK', b'CONT',
+                      b'CREA', b'DOOR', b'FURN', b'KEYM', b'LIGH', b'MISC',
+                      b'MSTT', b'NPC_', b'PROJ', b'TACT', b'TERM', b'WEAP'}
 
 #------------------------------------------------------------------------------
 # Import Actors
@@ -705,7 +706,7 @@ actor_importer_attrs = {
         u'NPC.Race': (u'race',),
     },
 }
-actor_types = ('CREA', 'NPC_')
+actor_types = (b'CREA', b'NPC_')
 
 #------------------------------------------------------------------------------
 # Import Spell Stats
