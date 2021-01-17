@@ -360,17 +360,17 @@ statsHeaders = (
 # Import Sounds
 #------------------------------------------------------------------------------
 soundsTypes = {
-    "ACTI": ('sound',),
-    "CONT": ('soundOpen','soundClose',),
-    "CREA": ('footWeight','inheritsSoundsFrom','sounds',),
-    "DOOR": ('soundOpen','soundClose','soundLoop',),
-    "LIGH": ('sound',),
-    "MGEF": ('castingSound','boltSound','hitSound','areaSound',),
-#    "REGN": ('entries.sounds',),
-    "SOUN": ('soundFile', 'minDistance', 'maxDistance', 'freqAdjustment', 'staticAtten',
+    b'ACTI': ('sound',),
+    b'CONT': ('soundOpen','soundClose',),
+    b'CREA': ('footWeight','inheritsSoundsFrom','sounds',),
+    b'DOOR': ('soundOpen','soundClose','soundLoop',),
+    b'LIGH': ('sound',),
+    b'MGEF': ('castingSound','boltSound','hitSound','areaSound',),
+#    b'REGN': ('entries.sounds',),
+    b'SOUN': ('soundFile', 'minDistance', 'maxDistance', 'freqAdjustment', 'staticAtten',
              'stopTime', 'startTime',),
-    "WATR": ('sound',),
-    "WTHR": ('sounds',),
+    b'WATR': ('sound',),
+    b'WTHR': ('sounds',),
 }
 
 #------------------------------------------------------------------------------

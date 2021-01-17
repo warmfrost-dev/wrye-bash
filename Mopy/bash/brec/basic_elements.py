@@ -386,6 +386,8 @@ class MelSequential(MelBase):
 
     def getDefaulters(self, defaulters, base):
         for element in self.elements:
+            ## TODO(lojac): is `base` a record/subrecord signature?  If so
+            ## prefix this string as a bytestring
             element.getDefaulters(defaulters, base + '.')
 
     def getLoaders(self, loaders):

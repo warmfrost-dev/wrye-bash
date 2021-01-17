@@ -170,7 +170,7 @@ class TopGrupHeader(GrupHeader):
 def unpack_header(ins, __rh=RecordHeader):
     """Header factory."""
     # args = header_sig, size, uint0, uint1, uint2[, uint3]
-    args = ins.unpack(__rh.header_unpack, __rh.rec_header_size, 'REC_HEADER') # PY3: header_sig, *args = ...
+    args = ins.unpack(__rh.header_unpack, __rh.rec_header_size, b'REC_HEADER') # PY3: header_sig, *args = ...
     #--Bad type?
     header_sig = args[0]
     if header_sig not in __rh.valid_header_sigs:
@@ -218,7 +218,7 @@ class ModReader(object):
         self.strings = string_table or {} # table may be None
 
     #--I/O Stream -----------------------------------------
-    def seek(self,offset,whence=os.SEEK_SET,recType='----'):
+    def seek(self,offset,whence=os.SEEK_SET,recType=b'----'):
         """File seek."""
         if whence == os.SEEK_CUR:
             newPos = self.ins.tell() + offset
@@ -238,7 +238,7 @@ class ModReader(object):
         """Close file."""
         self.ins.close()
 
-    def atEnd(self,endPos=-1,recType='----'):
+    def atEnd(self,endPos=-1,recType=b'----'):
         """Return True if current read position is at EOF."""
         filePos = self.ins.tell()
         if endPos == -1:
@@ -249,7 +249,7 @@ class ModReader(object):
             return filePos == endPos
 
     #--Read/Unpack ----------------------------------------
-    def read(self,size,recType='----'):
+    def read(self,size,recType=b'----'):
         """Read from file."""
         endPos = self.ins.tell() + size
         if endPos > self.size:
@@ -257,7 +257,7 @@ class ModReader(object):
                                          self.size)
         return self.ins.read(size)
 
-    def readLString(self, size, recType='----', __unpacker=_int_unpacker):
+    def readLString(self, size, recType=b'----', __unpacker=_int_unpacker):
         """Read translatable string. If the mod has STRINGS files, this is a
         uint32 to lookup the string in the string table. Otherwise, this is a
         zero-terminated string."""
@@ -271,17 +271,17 @@ class ModReader(object):
         else:
             return self.readString(size,recType)
 
-    def readString32(self, recType='----', __unpacker=_int_unpacker):
+    def readString32(self, recType=b'----', __unpacker=_int_unpacker):
         """Read wide pascal string: uint32 is used to indicate length."""
         strLen, = self.unpack(__unpacker, 4, recType)
         return self.readString(strLen,recType)
 
-    def readString(self,size,recType='----'):
+    def readString(self,size,recType=b'----'):
         """Read string from file, stripping zero terminator."""
-        return u'\n'.join(decoder(x,bolt.pluginEncoding,avoidEncodings=('utf8','utf-8')) for x in
-                          bolt.cstrip(self.read(size,recType)).split('\n'))
+        return u'\n'.join(decoder(x,bolt.pluginEncoding,avoidEncodings=(u'utf8',u'utf-8')) for x in
+                          bolt.cstrip(self.read(size,recType)).split(b'\n'))
 
-    def readStrings(self,size,recType='----'):
+    def readStrings(self,size,recType=b'----'):
         """Read strings from file, stripping zero terminator."""
         return [decoder(x,bolt.pluginEncoding,avoidEncodings=('utf8','utf-8')) for x in
                 self.read(size,recType).rstrip(null1).split(null1)]
