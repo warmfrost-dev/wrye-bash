@@ -292,7 +292,7 @@ class CIstr(unicode):
 
 def _ci_str(maybe_str):
     """dict keys can be any hashable object - only call CIstr if str"""
-    return CIstr(maybe_str) if isinstance(maybe_str, basestring) else maybe_str
+    return CIstr(maybe_str) if type(maybe_str) == unicode else maybe_str
 
 class LowerDict(dict):
     """Dictionary that transforms its keys to CIstr instances.
@@ -304,8 +304,12 @@ class LowerDict(dict):
     def _process_args(mapping=(), **kwargs):
         if hasattr(mapping, u'iteritems'): # PY3: items
             mapping = getattr(mapping, u'iteritems')()
-        return ((_ci_str(k), v) for k, v in
-                chain(mapping, getattr(kwargs, u'iteritems')()))
+        # PY3: fix mess below - kwargs keys are bytes im py2
+        return ((CIstr(k) if type(k) == unicode else k, v) for k, v in chain(
+            ((k.decode(u'ascii') if type(k) is bytes else k, v) for k, v in
+             mapping),
+            ((k.decode(u'ascii') if type(k) is bytes else k, v) for k, v in
+             getattr(kwargs, u'iteritems')())))
 
     def __init__(self, mapping=(), **kwargs):
         # dicts take a mapping or iterable as their optional first argument
