@@ -883,10 +883,9 @@ class FullNames(_HandleAliases):
             out.write(headFormat % (
                 _(u'Type'),_(u'Mod Name'),_(u'ObjectIndex'),_(u'Editor Id'),
                 _(u'Name')))
-            for type_ in sorted(type_id_name):
-                id_name = type_id_name[type_]
-                for longid, (eid, rec_name) in sorted(id_name.iteritems(),
-                    key=lambda (lid, (eid_, __)): (lid, eid_.lower())):
+            for type_, id_name in _key_sort(type_id_name):
+                for longid, (eid, rec_name) in _key_sort(id_name,
+                    keys_dex=[0], values_dex=[0]):
                     out.write(rowFormat % (type_, longid[0], longid[1], eid,
                                            rec_name.replace(u'"', u'""')))
 
@@ -1083,8 +1082,9 @@ class ItemStats(_HandleAliases):
                 if not fid_attr_value: continue
                 attrs = self.class_attrs[group]
                 out.write(header)
-                for longid, attr_value in sorted(fid_attr_value.iteritems(),
-                    key=lambda (lid, at_val): (lid, at_val[u'eid'].lower())):
+                for longid in sorted(fid_attr_value, key=lambda lid: (
+                        lid, fid_attr_value[lid][u'eid'].lower())):
+                    attr_value = fid_attr_value[longid]
                     out.write(
                         u'"%s","%s","0x%06X",' % (group,longid[0],longid[1]))
                     write(out, attrs, list(attr_value[a] for a in attrs))
