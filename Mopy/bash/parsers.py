@@ -1109,8 +1109,9 @@ class ScriptText(object):
         num = 0
         r = len(deprefix)
         with Progress(_(u'Export Scripts')) as progress:
-            for eid, (scpt_txt, longid) in sorted(eid_data.iteritems(),
-                key=lambda (eid, (scpt_txt, longid)): (eid, longid)):
+            for eid in sorted(eid_data,
+                              key=lambda eid: (eid, eid_data[eid][1])):
+                (scpt_txt, longid) = eid_data[eid]
                 scpt_txt = decoder(scpt_txt)
                 if skipcomments:
                     tmp = []
@@ -1448,9 +1449,8 @@ class SigilStoneDetails(_UsesEffectsMixin):
         with textPath.open(u'w', encoding=u'utf-8-sig') as out:
             outWrite = out.write
             outWrite(headFormat % header)
-            for fid in sorted(fid_stats,key=lambda x:fid_stats[x][0].lower()):
-                eid,name_,modpath,modb,iconpath,scriptfid,uses,value,weight,\
-                effects = fid_stats[fid]
+            for fid, (eid, name_, modpath, modb, iconpath, scriptfid, uses,
+                value, weight, effects) in _key_sort(fid_stats,values_dex=[0]):
                 scriptfid = scriptfid or (GPath(u'None'),None)
                 try:
                     output = rowFormat % (
