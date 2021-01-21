@@ -43,7 +43,7 @@ from .. import bush, bass, bolt, env, archives
 from ..archives import readExts, defaultExt, list_archive, compress7z, \
     extract7z, compressionSettings
 from ..bolt import Path, deprint, round_size, GPath, SubProgress, CIstr, \
-    LowerDict, AFile
+    LowerDict, AFile, dict_sort
 from ..exception import AbstractError, ArgumentError, BSAError, CancelError, \
     InstallerArchiveError, SkipError, StateError, FileError
 from ..ini_files import OBSEIniFile
@@ -156,7 +156,7 @@ class Installer(object):
         # is size 0 - add len(pending) to the progress bar max to ensure we
         # don't hit 100% and cause the progress bar to prematurely disappear
         progress.setFull(pending_size + len(pending))
-        for rpFile, (siz, _crc, date, asFile) in iter(sorted(pending.items())):
+        for rpFile, (siz, _crc, date, asFile) in dict_sort(pending):
             progress(done, progress_msg + rpFile)
             sub = bolt.SubProgress(progress, done, done + siz + 1)
             sub.setFull(siz + 1)
@@ -2606,7 +2606,7 @@ class InstallersData(DataStore):
 
     def _restoreFiles(self, restores, refresh_ui, progress):
         installer_destinations = {}
-        restores = sorted(restores.items(), key=itemgetter(1))
+        restores = dict_sort(restores, by_value=True) ##: TTT need list() here?
         for key, group in groupby(restores, key=itemgetter(1)):
             installer_destinations[key] = {dest for dest, _key in group}
         if not installer_destinations: return

@@ -2244,6 +2244,24 @@ def natural_key():
     return lambda curr_str: [_to_cmp(s) for s in
                              _digit_re.split(u'%s' % curr_str)]
 
+def dict_sort(di, id_eid_=None, keys_dex=(), values_dex=(), by_value=False):
+    if id_eid_ is not None: # we passed id_eid in sort by eid
+        key_f=lambda k: id_eid_.get(k, u'Unknown').lower()
+        for k in sorted(di, key=key_f):
+            yield k, di[k], id_eid_[k]
+    elif keys_dex or values_dex:
+        key_f = lambda k: tuple((u'%s' % k[x]).lower() for x in keys_dex) + tuple(
+            di[k][x] for x in values_dex)
+        for k in sorted(di, key=key_f):
+            yield k, di[k]
+    elif by_value:
+        key_f = lambda k: di[k]
+        for k in sorted(di, key=key_f):
+            yield k, di[k]
+    else:
+        for k in sorted(di):
+            yield k, di[k]
+
 # WryeText --------------------------------------------------------------------
 codebox = None
 class WryeText(object):
