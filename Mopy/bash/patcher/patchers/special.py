@@ -317,16 +317,12 @@ class ContentsCheckerPatcher(Patcher):
     contType_entryTypes = bush.game.cc_valid_types
     contTypes = set(contType_entryTypes)
     entryTypes = set(chain.from_iterable(contType_entryTypes.itervalues()))
+    _read_sigs= tuple(contTypes | entryTypes)
 
     def __init__(self, p_name, p_file):
         super(ContentsCheckerPatcher, self).__init__(p_name, p_file)
         self.fid_to_type = {}
         self.id_eid = {}
-
-    @property
-    def _read_sigs(self):
-        """Returns load factory classes needed for reading."""
-        return tuple(self.contTypes | self.entryTypes)
 
     @property
     def getWriteClasses(self):
