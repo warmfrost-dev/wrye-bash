@@ -96,7 +96,7 @@ class _AListsMerger(ListPatcher):
         :type tag_choices: defaultdict[bolt.Path, set[unicode]]"""
         super(_AListsMerger, self).__init__(p_name, p_file, p_sources)
         self.isActive |= bool(p_file.loadSet) # Can do meaningful work even without sources
-        self.type_list = {rec: {} for rec in self._read_write_records}
+        self.type_list = {rsig: {} for rsig in self._read_sigs}
         self.masterItems = defaultdict(dict)
         # Calculate levelers/de_masters first, using unmodified self.srcs
         self.levelers = [leveler for leveler in self.srcs if
@@ -127,7 +127,7 @@ class _AListsMerger(ListPatcher):
         sc_name = modFile.fileInfo.name
         #--PreScan for later Relevs/Delevs?
         if sc_name in self.de_masters:
-            for list_type in self._read_write_records:
+            for list_type in self._read_sigs:
                 for de_list in modFile.tops[list_type].getActiveRecords():
                     self.masterItems[de_list.fid][sc_name] = set(
                         self._get_entries(de_list))
@@ -136,7 +136,7 @@ class _AListsMerger(ListPatcher):
         is_relev = self._re_tag in applied_tags
         is_delev = self._de_tag in applied_tags
         #--Scan
-        for list_type in self._read_write_records:
+        for list_type in self._read_sigs:
             stored_lists = self.type_list[list_type]
             new_lists = modFile.tops[list_type]
             for new_list in new_lists.getActiveRecords():
@@ -185,7 +185,7 @@ class _AListsMerger(ListPatcher):
             log(u'* ' + self.annotate_plugin(leveler))
         # Save to patch file
         for list_type, list_label in self._type_to_label.iteritems():
-            if list_type not in self._read_write_records: continue
+            if list_type not in self._read_sigs: continue
             log.setHeader(u'=== ' + _(u'Merged %s Lists') % list_label)
             patch_block = self.patchFile.tops[list_type]
             stored_lists = self.type_list[list_type]
@@ -202,7 +202,7 @@ class _AListsMerger(ListPatcher):
         #--Discard empty sublists
         if not self.remove_empty_sublists: return
         for list_type, list_label in self._type_to_label.iteritems():
-            if list_type not in self._read_write_records: continue
+            if list_type not in self._read_sigs: continue
             patch_block = self.patchFile.tops[list_type]
             stored_lists = self.type_list[list_type]
             empty_lists = []
@@ -266,7 +266,7 @@ class _AListsMerger(ListPatcher):
 
 class LeveledListsPatcher(_AListsMerger):
     """Merges leveled lists."""
-    _read_write_records = bush.game.listTypes # bush.game must be set!
+    _read_sigs = bush.game.listTypes # bush.game must be set!
     _de_tag = u'Delev'
     _re_tag = u'Relev'
     _type_to_label = {
@@ -300,7 +300,7 @@ class LeveledListsPatcher(_AListsMerger):
 class FormIDListsPatcher(_AListsMerger):
     """Merges FormID lists."""
     patcher_order = 46
-    _read_write_records = (b'FLST',)
+    _read_sigs = (b'FLST',)
     _de_tag = u'Deflst'
     _type_to_label = {b'FLST': _(u'FormID')}
     _de_re_header = _(u'Deflsters')
@@ -323,10 +323,12 @@ class ContentsCheckerPatcher(Patcher):
         self.fid_to_type = {}
         self.id_eid = {}
 
-    def getReadClasses(self):
+    @property
+    def _read_sigs(self):
         """Returns load factory classes needed for reading."""
-        return tuple(self.contTypes | self.entryTypes) if self.isActive else ()
+        return tuple(self.contTypes | self.entryTypes)
 
+    @property
     def getWriteClasses(self):
         """Returns load factory classes needed for writing."""
         return tuple(self.contTypes) if self.isActive else ()

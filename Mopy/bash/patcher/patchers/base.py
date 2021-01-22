@@ -45,12 +45,8 @@ class MultiTweakItem(AMultiTweakItem):
     # Pooling' for a detailed overview of its implementation.
     supports_pooling = True
 
-    def getReadClasses(self):
-        """Returns load factory classes needed for reading."""
-        return self.__class__.tweak_read_classes
-
-    def getWriteClasses(self):
-        """Returns load factory classes needed for writing."""
+    @property
+    def tweak_sigs(self):
         return self.__class__.tweak_read_classes
 
     def prepare_for_tweaking(self, patch_file):
@@ -101,18 +97,13 @@ class MultiTweaker(AMultiTweaker,Patcher):
         # interested in and whether or not they can be pooled
         self._tweak_dict = t_dict = defaultdict(lambda: ([], []))
         for tweak in self.enabled_tweaks: # type: MultiTweakItem
-            for read_sig in tweak.getReadClasses():
+            for read_sig in tweak.tweak_sigs:
                 t_dict[read_sig][tweak.supports_pooling].append(tweak)
 
-    def getReadClasses(self):
-        """Returns load factory classes needed for reading."""
-        return chain.from_iterable(tweak.getReadClasses()
-            for tweak in self.enabled_tweaks) if self.isActive else ()
-
-    def getWriteClasses(self):
-        """Returns load factory classes needed for writing."""
-        return chain.from_iterable(tweak.getWriteClasses()
-            for tweak in self.enabled_tweaks) if self.isActive else ()
+    @property
+    def _read_sigs(self):
+        return chain.from_iterable(
+            tweak.tweak_sigs for tweak in self.enabled_tweaks)
 
     def scanModFile(self,modFile,progress):
         rec_pool = defaultdict(set)
@@ -233,11 +224,8 @@ class ReplaceFormIDsPatcher(ListPatcher):
                 u'%s is no longer in patches set' % srcPath, traceback=True)
             progress.plus()
 
+    @property
     def getReadClasses(self):
-        return tuple(MreRecord.simpleTypes | (
-            {b'CELL', b'WRLD', b'REFR', b'ACHR', b'ACRE'}))
-
-    def getWriteClasses(self):
         return tuple(MreRecord.simpleTypes | (
             {b'CELL', b'WRLD', b'REFR', b'ACHR', b'ACRE'}))
 
