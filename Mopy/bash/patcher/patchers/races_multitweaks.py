@@ -342,7 +342,7 @@ class RaceRecordsPatcher(AMultiTweaker, ListPatcher):
         # patcher will still run and blow up in scanModFile otherwise
         self._tweak_dict = t_dict = defaultdict(lambda: ([], []))
         for tweak in self.enabled_tweaks: # type: MultiTweakItem
-            for read_sig in tweak.tweak_sigs:
+            for read_sig in tweak.tweak_read_classes:
                 t_dict[read_sig][tweak.supports_pooling].append(tweak)
         if not self.isActive or not self.srcs: return
         loadFactory = LoadFactory(False, by_sig=[b'RACE'])

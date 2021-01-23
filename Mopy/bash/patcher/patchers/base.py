@@ -45,10 +45,6 @@ class MultiTweakItem(AMultiTweakItem):
     # Pooling' for a detailed overview of its implementation.
     supports_pooling = True
 
-    @property
-    def tweak_sigs(self):
-        return self.__class__.tweak_read_classes
-
     def prepare_for_tweaking(self, patch_file):
         """Gives this tweak a chance to use prepare for the phase where it gets
         its tweak_record calls using the specified patch file instance. At this
@@ -97,13 +93,13 @@ class MultiTweaker(AMultiTweaker,Patcher):
         # interested in and whether or not they can be pooled
         self._tweak_dict = t_dict = defaultdict(lambda: ([], []))
         for tweak in self.enabled_tweaks: # type: MultiTweakItem
-            for read_sig in tweak.tweak_sigs:
+            for read_sig in tweak.tweak_read_classes:
                 t_dict[read_sig][tweak.supports_pooling].append(tweak)
 
     @property
     def _read_sigs(self):
         return chain.from_iterable(
-            tweak.tweak_sigs for tweak in self.enabled_tweaks)
+            tweak.tweak_read_classes for tweak in self.enabled_tweaks)
 
     def scanModFile(self,modFile,progress):
         rec_pool = defaultdict(set)

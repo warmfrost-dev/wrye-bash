@@ -187,12 +187,10 @@ class PatchFile(ModFile):
     def initFactories(self,progress):
         """Gets load factories."""
         progress(0, _(u'Processing.'))
-        read_sigs = set(r.rec_sig for r in bush.game.readClasses) | set(
-            chain.from_iterable(
+        read_sigs = set(bush.game.readClasses) | set(chain.from_iterable(
                 p.getReadClasses for p in self._patcher_instances))
         self.readFactory = LoadFactory(False, by_sig=read_sigs)
-        write_sigs = set(r.rec_sig for r in bush.game.writeClasses) | set(
-            chain.from_iterable(
+        write_sigs = set(bush.game.writeClasses) | set(chain.from_iterable(
                 p.getWriteClasses for p in self._patcher_instances))
         self.loadFactory = LoadFactory(True, by_sig=write_sigs)
         #--Merge Factory
