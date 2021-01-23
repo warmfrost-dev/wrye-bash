@@ -224,6 +224,21 @@ def encode_complex_string(string_val, max_size=None, min_size=None,
         string_val += b'\x00' * (min_size - len(string_val))
     return string_val
 
+def conv_obj(o, conv_enc=None):
+    """Converts an object containing bytestrings to an equivalent object that
+    contains decoded versions of those bytestrings instead. Decoding is done
+    by trying the specified encoding first, then falling back on the regular
+    'guess and try' logic."""
+    if isinstance(o, dict):
+        return type(o)(((conv_obj(k, conv_enc), conv_obj(v, conv_enc))
+                        for k, v in o.iteritems()))
+    elif isinstance(o, (list, set, tuple)):
+        return type(o)(conv_obj(e, conv_enc) for e in o)
+    elif isinstance(o, bytes):
+        return decoder(o, encoding=conv_enc)
+    else:
+        return o
+
 def timestamp(): return datetime.datetime.now().strftime(u'%Y-%m-%d %H.%M.%S')
 
 ##: Keep an eye on https://bugs.python.org/issue31749

@@ -43,7 +43,7 @@ from .. import bush, bass, bolt, env, archives
 from ..archives import readExts, defaultExt, list_archive, compress7z, \
     extract7z, compressionSettings
 from ..bolt import Path, deprint, round_size, GPath, SubProgress, CIstr, \
-    LowerDict, AFile, dict_sort
+    LowerDict, AFile, dict_sort, conv_obj
 from ..exception import AbstractError, ArgumentError, BSAError, CancelError, \
     InstallerArchiveError, SkipError, StateError, FileError
 from ..ini_files import OBSEIniFile
@@ -65,6 +65,12 @@ class Installer(object):
         'espmMap', 'hasReadme', 'hasBCF', 'hasBethFiles', '_dir_dirs_files',
         'has_fomod_conf')
     __slots__ = persistent + volatile
+    # Every persistent attribute that may contain bytestrings and so needs
+    # converting on settings upgrade
+    can_have_bytestrings = {u'archive', u'group', u'fileSizeCrcs', u'subNames',
+                            u'subActives', u'comments', u'extras_dict',
+                            u'packageDoc', u'packagePic', u'espmNots',
+                            u'remaps'}
     #--Package analysis/porting.
     type_string = _(u'Unrecognized')
     docDirs = {u'screenshots'}
@@ -326,13 +332,17 @@ class Installer(object):
     def __setstate(self,values):
         self.initDefault() # runs on __init__ called by __reduce__
         for a, v in izip(self.persistent, values):
+            # Handle upgrades from pickled bytestrings due to py2. We use
+            # sys_fs_enc as the guess since almost all pickled strings are
+            # actually paths and filenames
+            if a in self.can_have_bytestrings:
+                v = conv_obj(v, conv_enc=Path.sys_fs_enc)
             setattr(self, a, v)
         rescan = False
         if not isinstance(self.extras_dict, dict):
             self.extras_dict = {}
             if self.fileRootIdex: # need to add 'root_path' key to extras_dict
                 rescan = True
-        self.extras_dict = {unicode(k): v for k, v in self.extras_dict.iteritems()}
         if not self.abs_path.exists(): # pickled installer deleted outside bash
             return  # don't do anything should be deleted from our data soon
         if not isinstance(self.src_sizeCrcDate, bolt.LowerDict):
