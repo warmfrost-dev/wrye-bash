@@ -589,6 +589,8 @@
         Delete "${Path}\Mopy\bash\images\readme\people-1.png"
         Delete "${Path}\Mopy\bash\images\readme\people-2.png"
         Delete "${Path}\Mopy\bash\images\readme\people-3-menu.png"
+        ; As of 308, translations use the .po extension
+        Delete "${Path}\Mopy\bash\l10n\*.txt"
     !macroend
 
 
