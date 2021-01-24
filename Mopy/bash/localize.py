@@ -72,6 +72,11 @@ def setup_locale(cli_lang):
     target_locale = _wx.Locale(target_language)
     target_name = target_locale.GetCanonicalName()
     trans_path = os.path.join(os.getcwdu(), u'bash', u'l10n')
+    if not os.path.exists(trans_path):
+        # HACK: the CI has to run tests form the top dir, which causes us to
+        # have a non-Mopy working dir here. Real fix is ditching the fake
+        # startup and adding a real headless mode to WB (see #568 and #554)
+        trans_path = os.path.join(os.getcwdu(), u'Mopy', u'bash', u'l10n')
     supported_l10ns = [l[:-3] for l in os.listdir(trans_path)
                        if l[-3:] == u'.po']
     if not any(l == target_name for l in supported_l10ns):
