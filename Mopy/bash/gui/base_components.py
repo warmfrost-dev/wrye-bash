@@ -258,6 +258,11 @@ class _AComponent(object):
         self._native_widget.SetForegroundColour(new_color.to_rgba_tuple())
         self._native_widget.Refresh()
 
+    def reset_foreground_color(self):
+        """Reset the foreground color of this component to the default one."""
+        self._native_widget.SetForegroundColour(_wx.NullColour)
+        self._native_widget.Refresh()
+
     @property
     def component_position(self):
         """Returns the X and Y position of this component as a tuple.
