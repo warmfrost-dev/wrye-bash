@@ -233,6 +233,7 @@ class ColorsPage(_AFixedPage): ##: _AScrollablePage breaks the color picker??
         u'installers': _(u'[Installers] '),
         u'ini': _(u'[INI Edits] '),
         u'tweak': _(u'[INI Edits] '),
+        u'saves': _(u'[Saves] '),
         u'default': _(u'[All] '),
     }
 

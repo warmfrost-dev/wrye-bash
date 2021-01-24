@@ -2177,8 +2177,10 @@ class SaveDetails(_ModsSavesDetails):
               u'without an up-to-date cosave. Please install the latest '
               u'version of %s and create a new save to see the true master '
               u'order.') % bush.game.Se.se_abbrev if show_warning else u'')
-        self._masters_label.set_foreground_color(
-            colors.RED if show_warning else colors.BLACK)
+        if show_warning:
+            self._masters_label.set_foreground_color(colors[u'saves.label.mastersInaccurate'])
+        else:
+            self._masters_label.reset_foreground_color()
 
     def OnInfoEdit(self, new_text):
         """Info field was edited."""

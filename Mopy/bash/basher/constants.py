@@ -136,6 +136,12 @@ colorInfo = {
         _(u'Tabs: Saves, Screens') + u'\n\n' +
         _(u'This is the background color used for images.'),
     ),
+    u'saves.label.mastersInaccurate': (_(u'Saves Masters Label'),
+        _(u'Tabs: Saves') + u'\n\n' +
+        _(u'This is the text color to use on the label for the masters list'
+          u' when the save\'s master list may be inaccurate due to using ESLs'
+          u' without a SKSE cosave.'),
+    ),
 }
 if bush.game.check_esl:
     colorInfo[u'mods.text.mergeable'] = (_(u'ESL Capable plugin'),
@@ -198,6 +204,8 @@ settingDefaults = { # keep current naming format till refactored
         u'installers.bkgd.dirty':        (255, 187, 51),
         #--Screens Tab
         u'screens.bkgd.image':           (100, 100, 100),
+        #--Saves Tab
+        u'saves.label.mastersInaccurate':(255, 0,   0),   # 'RED'
     },
     #--BSA Redirection
     u'bash.bsaRedirection': True,
